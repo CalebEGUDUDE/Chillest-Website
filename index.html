@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Chillest Website</title>
         <script src="js/download.js" defer></script>
         <script src="js/play.js" defer></script>
         <script src="js/load-games.js" defer></script>
@@ -8,14 +11,23 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <h1>Chillest Website</h1>
-        <p id="splash"></p>
-        <div class="input-wrapper">
-            <img src="https://cdn.jsdelivr.net/gh/calebegudude/chillest-website-games/assets/images/search.png" class="input-icon">
-            <input id="search" class="search-input" placeholder="Search...">
+        <header class="site-header">
+            <h1>Chillest Website</h1>
+            <p id="splash"></p>
+        </header>
+        <div class="site-layout">
+            <aside class="sidebar">
+                <div class="input-wrapper">
+                    <img src="https://cdn.jsdelivr.net/gh/calebegudude/chillest-website-games/assets/images/search.png" class="input-icon" alt="">
+                    <input id="search" class="search-input" placeholder="search..." aria-label="Search games">
+                </div>
+                <nav id="catagories" class="catagories" aria-label="Game categories"></nav>
+            </aside>
+            <main class="games-area">
+                <br>
+                <br>
+                <div class="container" id="container"></div>
+            </main>
         </div>
-        <br>
-        <div id="catagories" class="catagories"></div>
-        <div class="container" id="container"></div>
     </body>
 </html>
