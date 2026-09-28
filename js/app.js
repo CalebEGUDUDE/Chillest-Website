@@ -1,3 +1,46 @@
+function downloadGame(url, filename) {
+  fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error('Download request failed');
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    })
+    .catch(error => console.error('Error downloading game:', error));
+}
+
+function playGame(url) {
+  const newWin = window.open('about:blank', '_blank');
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) throw new Error('Play request failed');
+      return response.text();
+    })
+    .then(htmlContent => {
+      if (newWin) {
+        newWin.document.open();
+
+        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+        const preparedHtml = htmlContent.includes('<head>')
+          ? htmlContent.replace('<head>', `<head><base href="${baseUrl}">`)
+          : `<base href="${baseUrl}">${htmlContent}`;
+
+        newWin.document.write(preparedHtml);
+        newWin.document.close();
+      }
+    })
+    .catch(error => console.error('Error playing game:', error));
+}
+
 const REPO_OWNER = 'CalebEGUDUDE';
 const REPO_NAME = 'Chillest-Website-Games';
 const CDN_BASE = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@games`;
@@ -58,7 +101,6 @@ function renderCategoryButtons(categories) {
       renderCategoryButtons(getCategoryButtons(state.games));
       renderGames();
     });
-    // Right-click to hide/show category
     button.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       if (category !== 'All') {
@@ -173,4 +215,42 @@ async function loadGames() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', loadGames);
+const SPLASHES_URL = 'https://raw.githubusercontent.com/CalebEGUDUDE/Chillest-Website-Games/main/assets/text/splashes.json';
+
+function getSplashPool(payload) {
+  if (Array.isArray(payload)) return payload.filter(item => typeof item === 'string');
+  if (payload && Array.isArray(payload.splashes)) {
+    return payload.splashes.filter(item => typeof item === 'string');
+  }
+  return [];
+}
+
+async function loadSplash() {
+  const splashElement = document.getElementById('splash');
+  if (!splashElement) return;
+
+  try {
+    const response = await fetch(SPLASHES_URL, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Splash request failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    const splashes = getSplashPool(payload);
+
+    if (splashes.length === 0) {
+      throw new Error('No splash entries were returned');
+    }
+
+    const randomSplash = splashes[Math.floor(Math.random() * splashes.length)];
+    splashElement.textContent = randomSplash;
+  } catch (error) {
+    console.error('Failed to load splash:', error);
+    splashElement.textContent = 'Loading...';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadGames();
+  loadSplash();
+});
