@@ -4,6 +4,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Chillest Website</title>
+        <link id="site-favicon" rel="icon" type="image/svg+xml">
         <script src="js/app.js" defer></script>
         <link rel="stylesheet" href="style.css">
         <script defer src="https://cloud.umami.is/script.js" data-website-id="079762ca-8e26-4875-8616-3d989e17cfe0"></script>
@@ -15,16 +16,40 @@
         </header>
         <div class="site-layout">
             <aside class="sidebar">
-                <div class="input-wrapper">
-                    <img src="https://cdn.jsdelivr.net/gh/calebegudude/chillest-website-games/assets/images/search.png" class="input-icon" alt="">
-                    <input id="search" class="search-input" placeholder="search..." aria-label="Search games">
+                <nav class="page-nav" aria-label="Pages">
+                    <button id="games-view-button" class="bar active" type="button" aria-pressed="true">Games</button>
+                    <button id="settings-view-button" class="bar" type="button" aria-pressed="false">Settings</button>
+                </nav>
+                <div id="game-controls">
+                    <div class="input-wrapper">
+                        <img src="https://cdn.jsdelivr.net/gh/calebegudude/chillest-website-games/assets/images/search.png" class="input-icon" alt="">
+                        <input id="search" class="search-input" placeholder="search..." aria-label="Search games">
+                    </div>
+                    <nav id="catagories" class="catagories" aria-label="Game categories"></nav>
                 </div>
-                <nav id="catagories" class="catagories" aria-label="Game categories"></nav>
             </aside>
             <main class="games-area">
-                <br>
-                <br>
-                <div class="container" id="container"></div>
+                <div id="games-page">
+                    <br>
+                    <br>
+                    <div class="container" id="container"></div>
+                </div>
+                <section id="settings-page" aria-labelledby="settings-title" hidden>
+                    <h2 id="settings-title">Settings</h2>
+                    <label class="setting-option" for="open-in-new-tab">
+                        <input id="open-in-new-tab" type="checkbox">
+                        <span>Open in new tab</span>
+                    </label>
+                    <label class="setting-option" for="cl0ak">
+                        <input id="cl0ak" type="checkbox">
+                        <span>cl0ak</span>
+                    </label>
+                    <div class="tab-icon-setting">
+                        <label for="cloak-website">Website to cloak as</label>
+                        <input id="cloak-website" type="text" placeholder="example.com" autocomplete="url">
+                        <button id="reset-cloak-website" type="button">Use default</button>
+                    </div>
+                </section>
             </main>
         </div>
     </body>
