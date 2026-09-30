@@ -1,2 +1,14 @@
 # Chillest Website!
-v1 release
+
+## Planned Features:
+- [ ] Settings
+- [ ] Cl0aks
+- [ ] Themes
+- [ ] Sandbox (Saving)
+- [ ] Save Exporting / Importing
+
+## Planned Games:
+- [ ] HTML Launcher
+- [ ] Volcano v4
+- [ ] UGS
+- [ ] GN-Math

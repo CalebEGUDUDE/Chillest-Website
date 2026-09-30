@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>About:Blank Launcher</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tiny5&display=swap');
+
+    :root {
+        --background: #06384b;
+        --orange: #ff8c00;
+        --yellow: #ffb000;
+        --dim-orange: rgba(255, 140, 0, 0.35);
+        --red: #ff5555;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      background: var(--background);
+      color: var(--orange);
+      font-family: "Tiny5", monospace;
+    }
+
+    .launcher-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      padding: 32px;
+      border: 4px solid var(--orange);
+      border-radius: 14px;
+      background: var(--background);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      font-weight: 400;
+      color: var(--orange);
+    }
+
+    .channel-picker {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .channel-picker label {
+      font-size: 1.1rem;
+      color: var(--yellow);
+    }
+
+    select {
+      width: 100%;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 1.15rem;
+      color: var(--orange);
+      background-color: var(--background);
+      border: 3px solid var(--orange);
+      border-radius: 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--yellow);
+      color: var(--yellow);
+    }
+
+    button {
+      padding: 14px 28px;
+      font-size: 1.8rem;
+      color: var(--orange);
+      background-color: var(--background);
+      border: 4px solid var(--orange);
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      color: var(--yellow);
+      border-color: var(--yellow);
+    }
+
+    button:disabled {
+      border-color: var(--dim-orange);
+      color: var(--dim-orange);
+      cursor: not-allowed;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 1.25rem;
+      color: var(--yellow);
+      min-height: 24px;
+    }
+
+    .sync-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--yellow);
+      display: inline-block;
+    }
+
+    .syncing .sync-dot {
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+
+    .ready .sync-dot {
+      background-color: #55ff55;
+    }
+
+    .error .sync-dot {
+      background-color: var(--red);
+    }
+
+    .error {
+      color: var(--red);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="launcher-card">
+    <h1>Chillest Website</h1>
+    
+    <div class="channel-picker">
+      <label for="channelSelect">Version Source:</label>
+      <select id="channelSelect">
+        <option value="release">Latest Release (Recommended)</option>
+        <option value="main">@main Branch (Not Recommended)</option>
+      </select>
+    </div>
+
+    <button id="launchBtn" disabled>Unavailable</button>
+
+    <div id="syncStatus" class="sync-status syncing">
+      <span class="sync-dot"></span>
+      <span id="syncText">Syncing target...</span>
+    </div>
+  </div>
+
+  <script>
+    const REPO = 'CalebEGUDUDE/Chillest-Website';
+    const launchBtn = document.getElementById('launchBtn');
+    const syncStatus = document.getElementById('syncStatus');
+    const syncText = document.getElementById('syncText');
+    const channelSelect = document.getElementById('channelSelect');
+
+    let resolvedTag = null;
+    let cdnRef = null;
+    let cdnBaseUrl = '';
+
+    function updateSyncState(state, message, canLaunch = false, btnText = 'Unavailable') {
+      syncStatus.className = `sync-status ${state}`;
+      syncText.textContent = message;
+      launchBtn.disabled = !canLaunch;
+      launchBtn.textContent = btnText;
+    }
+
+    async function syncTarget() {
+      const mode = channelSelect.value;
+      resolvedTag = null;
+      cdnRef = null;
+
+      updateSyncState('syncing', 'Syncing version...', false, 'Syncing...');
+
+      if (mode === 'main') {
+        resolvedTag = 'main';
+        cdnRef = 'main';
+      } else {
+        try {
+          const releaseRes = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store' });
+          if (releaseRes.ok) {
+            const release = await releaseRes.json();
+            if (release && release.tag_name) {
+              const commitRes = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(release.tag_name)}`, { cache: 'no-store' });
+              if (commitRes.ok) {
+                const commit = await commitRes.json();
+                if (commit && commit.sha) {
+                  resolvedTag = release.tag_name;
+                  cdnRef = commit.sha;
+                }
+              }
+            }
+          }
+        } catch (err) {
+          // Failed to resolve the latest release
+        }
+      }
+
+      if (!resolvedTag || !cdnRef) {
+        updateSyncState('error', 'Release unavailable', false, 'Unavailable');
+        return;
+      }
+
+      cdnBaseUrl = `https://cdn.jsdelivr.net/gh/${REPO}@${cdnRef}/`;
+
+      try {
+        updateSyncState('syncing', 'Verifying files...', false, 'Syncing...');
+        const testRes = await fetch(`${cdnBaseUrl}index.html`);
+        
+        if (testRes.ok) {
+          updateSyncState('ready', `Synced (${resolvedTag})`, true, 'Launch Site');
+        } else {
+          updateSyncState('error', 'Files unreadable (Try @main?)', false, 'Unavailable');
+        }
+      } catch (err) {
+        updateSyncState('error', 'Sync failed', false, 'Unavailable');
+      }
+    }
+
+    channelSelect.addEventListener('change', syncTarget);
+
+    launchBtn.addEventListener('click', async () => {
+      if (!resolvedTag || launchBtn.disabled) return;
+
+      const win = window.open('about:blank', '_blank');
+
+      if (!win) {
+        updateSyncState('error', 'Popup blocked', false, 'Blocked');
+        alert('Please allow popups to open the site.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${cdnBaseUrl}index.html`);
+        if (!response.ok) throw new Error('File download failed');
+
+        let htmlContent = await response.text();
+
+        const baseTag = `<base href="${cdnBaseUrl}">`;
+        if (htmlContent.includes('<head>')) {
+          htmlContent = htmlContent.replace('<head>', `<head>${baseTag}`);
+        } else {
+          htmlContent = baseTag + htmlContent;
+        }
+
+        win.document.open();
+        win.document.write(htmlContent);
+        win.document.close();
+        
+        updateSyncState('ready', `Synced (${resolvedTag})`, true, 'Launch Site');
+      } catch (err) {
+        updateSyncState('error', 'Launch failed', false, 'Unavailable');
+      }
+    });
+
+    syncTarget();
+  </script>
+
+</body>
+</html>
