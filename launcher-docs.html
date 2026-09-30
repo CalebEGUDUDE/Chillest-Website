@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Loading Chillest Launcher...</title>
+	<style>
+		body {
+			display: grid;
+			min-height: 100vh;
+			margin: 0;
+			place-items: center;
+			background: #06384b;
+			color: #ffb000;
+			font: 1.25rem monospace;
+		}
+
+		a {
+			color: #ff8c00;
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<p id="status">Loading the latest launcher...</p>
+		<a id="fallback" href="https://github.com/CalebEGUDUDE/Chillest-Website/blob/main/launcher.html" hidden>Open launcher on GitHub</a>
+	</main>
+
+	<script>
+		const launcherUrl = 'https://raw.githubusercontent.com/CalebEGUDUDE/Chillest-Website/main/launcher.html';
+
+		async function loadLauncher() {
+			try {
+				const response = await fetch(`${launcherUrl}?t=${Date.now()}`, { cache: 'no-store' });
+				if (!response.ok) throw new Error('Launcher request failed');
+
+				const html = await response.text();
+				if (!html.includes('<html')) throw new Error('Launcher response was invalid');
+
+				document.open();
+				document.write(html);
+				document.close();
+			} catch (error) {
+				document.getElementById('status').textContent = 'Could not load the latest launcher. Check your connection and try again.';
+				document.getElementById('fallback').hidden = false;
+			}
+		}
+
+		loadLauncher();
+	</script>
+</body>
+</html>
