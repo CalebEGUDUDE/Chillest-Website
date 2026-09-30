@@ -43,7 +43,7 @@ function playGame(url) {
 
 const REPO_OWNER = 'CalebEGUDUDE';
 const REPO_NAME = 'Chillest-Website-Games';
-const CDN_BASE = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@games`;
+const CDN_BASE = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@main`;
 
 const state = {
   games: [],
