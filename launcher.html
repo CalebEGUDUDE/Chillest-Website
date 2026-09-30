@@ -154,9 +154,8 @@
     
     <div class="channel-picker">
       <label for="channelSelect">Version Source:</label>
-      <select id="channelSelect">
-        <option value="release">Latest Release (Recommended)</option>
-        <option value="main">@main Branch (Not Recommended)</option>
+      <select id="channelSelect" disabled>
+        <option value="">Loading versions...</option>
       </select>
     </div>
 
@@ -187,38 +186,37 @@
     }
 
     async function syncTarget() {
-      const mode = channelSelect.value;
+      const selectedVersion = channelSelect.value;
       resolvedTag = null;
       cdnRef = null;
 
       updateSyncState('syncing', 'Syncing version...', false, 'Syncing...');
 
-      if (mode === 'main') {
+      if (!selectedVersion) {
+        updateSyncState('error', 'No version selected', false, 'Unavailable');
+        return;
+      }
+
+      if (selectedVersion === 'main') {
         resolvedTag = 'main';
         cdnRef = 'main';
       } else {
         try {
-          const releaseRes = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store' });
-          if (releaseRes.ok) {
-            const release = await releaseRes.json();
-            if (release && release.tag_name) {
-              const commitRes = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(release.tag_name)}`, { cache: 'no-store' });
-              if (commitRes.ok) {
-                const commit = await commitRes.json();
-                if (commit && commit.sha) {
-                  resolvedTag = release.tag_name;
-                  cdnRef = commit.sha;
-                }
-              }
+          const commitRes = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(selectedVersion)}`, { cache: 'no-store' });
+          if (commitRes.ok) {
+            const commit = await commitRes.json();
+            if (commit && commit.sha) {
+              resolvedTag = selectedVersion;
+              cdnRef = commit.sha;
             }
           }
         } catch (err) {
-          // Failed to resolve the latest release
+          // Failed to resolve the selected version
         }
       }
 
       if (!resolvedTag || !cdnRef) {
-        updateSyncState('error', 'Release unavailable', false, 'Unavailable');
+        updateSyncState('error', 'Version unavailable', false, 'Unavailable');
         return;
       }
 
@@ -238,7 +236,71 @@
       }
     }
 
+    async function loadVersions() {
+      try {
+        const [tags, releaseResponse] = await Promise.all([
+          loadAllTags(),
+          fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store' })
+        ]);
+        const release = releaseResponse.ok ? await releaseResponse.json() : null;
+        const latestTag = release && release.tag_name;
+        const versions = [...new Set([latestTag, ...tags.map(tag => tag.name)].filter(Boolean))];
+
+        if (versions.length === 0) throw new Error('No versions found');
+
+        channelSelect.replaceChildren();
+        const versionGroup = document.createElement('optgroup');
+        versionGroup.label = 'Versions';
+        for (const version of versions) {
+          const option = document.createElement('option');
+          option.value = version;
+          option.textContent = version === latestTag ? `${version} (Latest Release)` : version;
+          versionGroup.append(option);
+        }
+        channelSelect.append(versionGroup);
+
+        const mainOption = document.createElement('option');
+        mainOption.value = 'main';
+        mainOption.textContent = '@main Branch (Not Recommended)';
+        channelSelect.append(mainOption);
+
+        channelSelect.value = latestTag && versions.includes(latestTag) ? latestTag : versions[0];
+        channelSelect.disabled = false;
+        await syncTarget();
+      } catch (err) {
+        channelSelect.replaceChildren();
+        const unavailableOption = document.createElement('option');
+        unavailableOption.value = '';
+        unavailableOption.textContent = 'Versions unavailable';
+        channelSelect.append(unavailableOption);
+
+        const mainOption = document.createElement('option');
+        mainOption.value = 'main';
+        mainOption.textContent = '@main Branch (Not Recommended)';
+        channelSelect.append(mainOption);
+        channelSelect.disabled = false;
+        updateSyncState('error', 'Could not load versions', false, 'Unavailable');
+      }
+    }
+
+    async function loadAllTags() {
+      const tags = [];
+      let page = 1;
+      let pageTags;
+
+      do {
+        const response = await fetch(`https://api.github.com/repos/${REPO}/tags?per_page=100&page=${page}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load tags');
+        pageTags = await response.json();
+        tags.push(...pageTags);
+        page += 1;
+      } while (pageTags.length === 100);
+
+      return tags;
+    }
+
     channelSelect.addEventListener('change', syncTarget);
+    loadVersions();
 
     launchBtn.addEventListener('click', async () => {
       if (!resolvedTag || launchBtn.disabled) return;
@@ -274,7 +336,6 @@
       }
     });
 
-    syncTarget();
   </script>
 
 </body>
