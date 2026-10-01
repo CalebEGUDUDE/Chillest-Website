@@ -1,11 +1,9 @@
 # Chillest Website!
 
 ## Planned Features:
-- [ ] Settings
-- [ ] Cl0aks
-- [ ] Themes
-- [ ] Sandbox (Saving)
-- [ ] Save Exporting / Importing
+- [x] Settings
+- [x] Cl0aks
+- [x] Themes
 
 ## Planned Games:
 - [ ] HTML Launcher

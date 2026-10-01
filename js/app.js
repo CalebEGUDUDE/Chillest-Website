@@ -17,8 +17,21 @@ function downloadGame(url, filename) {
     .catch(error => console.error('Error downloading game:', error));
 }
 
-async function loadGameIntoFrame(frame, url) {
-  const gameDocument = frame.contentDocument;
+function addBaseTagIfMissing(html, baseTag) {
+  const headMatch = /<head\b[^>]*>/i.exec(html);
+  if (!headMatch) {
+    return /<base\b[^>]*\bhref\s*=/i.test(html) ? html : `${baseTag}${html}`;
+  }
+
+  const headContentStart = headMatch.index + headMatch[0].length;
+  const headCloseMatch = /<\/head\s*>/i.exec(html.slice(headContentStart));
+  const headContentEnd = headCloseMatch ? headContentStart + headCloseMatch.index : html.length;
+  if (/<base\b[^>]*\bhref\s*=/i.test(html.slice(headMatch.index, headContentEnd))) return html;
+
+  return `${html.slice(0, headContentStart)}${baseTag}${html.slice(headContentStart)}`;
+}
+
+async function loadGameIntoDocument(gameDocument, url) {
   if (!gameDocument) return;
 
   try {
@@ -31,11 +44,8 @@ async function loadGameIntoFrame(frame, url) {
 
     if (!reader) {
       const html = await response.text();
-      const preparedHtml = /<head\b[^>]*>/i.test(html)
-        ? html.replace(/<head\b[^>]*>/i, head => `${head}${baseTag}`)
-        : `${baseTag}${html}`;
       gameDocument.open();
-      gameDocument.write(preparedHtml);
+      gameDocument.write(addBaseTagIfMissing(html, baseTag));
       gameDocument.close();
       return;
     }
@@ -50,15 +60,18 @@ async function loadGameIntoFrame(frame, url) {
 
       if (!documentStarted) {
         const headMatch = /<head\b[^>]*>/i.exec(pending);
-        if (headMatch) {
-          const headEnd = headMatch.index + headMatch[0].length;
+        const headContentStart = headMatch ? headMatch.index + headMatch[0].length : 0;
+        const headCloseMatch = headMatch ? /<\/head\s*>/i.exec(pending.slice(headContentStart)) : null;
+
+        if (headMatch && headCloseMatch) {
+          const headEnd = headContentStart + headCloseMatch.index + headCloseMatch[0].length;
           gameDocument.open();
-          gameDocument.write(`${pending.slice(0, headEnd)}${baseTag}`);
+          gameDocument.write(addBaseTagIfMissing(pending.slice(0, headEnd), baseTag));
           pending = pending.slice(headEnd);
           documentStarted = true;
         } else if (done) {
           gameDocument.open();
-          gameDocument.write(`${baseTag}${pending}`);
+          gameDocument.write(addBaseTagIfMissing(pending, baseTag));
           pending = '';
           documentStarted = true;
         }
@@ -84,18 +97,8 @@ async function loadGameIntoFrame(frame, url) {
   }
 }
 
-function createGamePlayer(targetWindow, url, isPopup) {
-  const playerDocument = targetWindow.document;
-
-  if (isPopup) {
-    const stylesheetUrl = new URL('style.css', window.location.href).href
-      .replaceAll('&', '&amp;')
-      .replaceAll('"', '&quot;');
-    playerDocument.open();
-    playerDocument.write(`<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="${stylesheetUrl}"><title>Playing game</title></head><body></body></html>`);
-    playerDocument.close();
-  }
-
+function createGamePlayer(url) {
+  const playerDocument = document;
   const player = playerDocument.createElement('main');
   player.className = 'game-player';
   const toolbar = playerDocument.createElement('nav');
@@ -116,8 +119,7 @@ function createGamePlayer(targetWindow, url, isPopup) {
   };
 
   addAction('Open in new tab', () => {
-    const newWindow = targetWindow.open('about:blank', '_blank');
-    if (newWindow) createGamePlayer(newWindow, url, true);
+    openGameInNewTab(url);
   });
   addAction('Fullscreen', () => {
     const request = frame.requestFullscreen?.();
@@ -125,29 +127,35 @@ function createGamePlayer(targetWindow, url, isPopup) {
   });
   addAction('Download', () => downloadGame(url, url.split('/').pop() || 'game.html'));
   addAction('Close', () => {
-    if (isPopup) {
-      targetWindow.close();
-    } else {
-      player.remove();
-    }
+    player.remove();
   });
 
   player.append(toolbar, frame);
-  if (isPopup) {
-    playerDocument.body.appendChild(player);
-  } else {
-    document.body.appendChild(player);
-  }
-  loadGameIntoFrame(frame, url);
+  playerDocument.body.appendChild(player);
+  loadGameIntoDocument(frame.contentDocument, url);
+}
+
+function openGameInNewTab(url) {
+  const gameWindow = window.open('about:blank', '_blank');
+  if (!gameWindow) return;
+
+  gameWindow.opener = null;
+  loadGameIntoDocument(gameWindow.document, url);
 }
 
 function playGame(url) {
-  createGamePlayer(window, url, false);
+  if (state.openInNewTab) {
+    openGameInNewTab(url);
+    return;
+  }
+
+  createGamePlayer(url);
 }
 
 const REPO_OWNER = 'CalebEGUDUDE';
 const REPO_NAME = 'Chillest-Website-Games';
-const CDN_BASE = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@main`;
+const GAMES_RELEASE = 'v1-0-0_release';
+const GAMES_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${GAMES_RELEASE}`;
 
 const state = {
   games: [],
@@ -245,8 +253,8 @@ function renderGames() {
   filteredGames.forEach(game => {
     const matchingIcon = game.icon;
     const fallbackUrl = `https://via.placeholder.com/200?text=${encodeURIComponent(game.name)}`;
-    const rawIconUrl = matchingIcon ? `${CDN_BASE}/${matchingIcon}` : fallbackUrl;
-    const downloadButton = state.openInNewTab ? '' : '<button class="download" style="cursor: pointer;">Download</button>';
+    const rawIconUrl = matchingIcon ? `${GAMES_BASE_URL}/${matchingIcon}` : fallbackUrl;
+    const downloadButton = state.openInNewTab ? '<button class="download" style="cursor: pointer;">Download</button>' : '';
 
     const gameCard = document.createElement('div');
     gameCard.className = 'game-card';
@@ -254,13 +262,11 @@ function renderGames() {
       <div class="game-name">${game.name}</div>
       <img src="${rawIconUrl}"
            onerror="this.src='${fallbackUrl}';"
-           style="width:200px;height:200px;object-fit: cover; border-radius: 20px;"
            alt="${game.name}">
       <div class="game-buttons">
         ${downloadButton}
         <input type="button" value="Play" class="play" style="cursor: pointer;">
       </div>
-      <br>
     `;
 
     const downloadControl = gameCard.querySelector('.download');
@@ -373,7 +379,61 @@ function setTabCloaking(enabled, websiteValue = '') {
   });
 }
 
+const THEME_SETTINGS = [
+  { id: 'theme-background', property: '--background', storageKey: 'themeBackground', defaultColor: '#06384b' },
+  { id: 'theme-text', property: '--orange', storageKey: 'themeText', defaultColor: '#ff8c00' },
+  { id: 'theme-highlight', property: '--yellow', storageKey: 'themeHighlight', defaultColor: '#ffb000' }
+];
+
+function setupThemeSettings() {
+  const root = document.documentElement;
+  const colorInputs = THEME_SETTINGS.map(setting => ({
+    ...setting,
+    input: document.getElementById(setting.id)
+  }));
+
+  const applyColor = (setting, color) => {
+    if (!setting.input || !/^#[\da-f]{6}$/i.test(color)) return;
+    setting.input.value = color;
+    root.style.setProperty(setting.property, color);
+  };
+
+  colorInputs.forEach(setting => {
+    if (!setting.input) return;
+
+    let savedColor = setting.defaultColor;
+    try {
+      const storedColor = localStorage.getItem(setting.storageKey);
+      if (storedColor && /^#[\da-f]{6}$/i.test(storedColor)) savedColor = storedColor;
+    } catch (error) {
+      console.warn('Unable to load theme settings:', error);
+    }
+    applyColor(setting, savedColor);
+
+    setting.input.addEventListener('input', () => {
+      applyColor(setting, setting.input.value);
+      try {
+        localStorage.setItem(setting.storageKey, setting.input.value);
+      } catch (error) {
+        console.warn('Unable to save theme settings:', error);
+      }
+    });
+  });
+
+  document.getElementById('reset-theme')?.addEventListener('click', () => {
+    colorInputs.forEach(setting => {
+      applyColor(setting, setting.defaultColor);
+      try {
+        localStorage.removeItem(setting.storageKey);
+      } catch (error) {
+        console.warn('Unable to reset theme settings:', error);
+      }
+    });
+  });
+}
+
 function setupPageNavigation() {
+  setupThemeSettings();
   const gamesButton = document.getElementById('games-view-button');
   const settingsButton = document.getElementById('settings-view-button');
   const gameControls = document.getElementById('game-controls');
@@ -488,7 +548,7 @@ async function loadGames() {
   }
 
   try {
-    const response = await fetch(`${CDN_BASE}/games/games.json`, { cache: 'no-store' });
+    const response = await fetch(`${GAMES_BASE_URL}/games/games.json`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Unable to load game list (${response.status})`);
 
     const data = await response.json();
@@ -510,7 +570,7 @@ async function loadGames() {
         name: item.name.trim(),
         category,
         fileName,
-        url: filePath ? `${CDN_BASE}/${filePath}` : null,
+        url: filePath ? `${GAMES_BASE_URL}/${filePath}` : null,
         icon: iconPath
       };
     });

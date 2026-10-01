@@ -76,6 +76,49 @@ h1 {
     font-weight: 400;
 }
 
+.settings-subtitle {
+    margin: 30px 0 0;
+    color: var(--yellow);
+    font-size: 1.3rem;
+    font-weight: 400;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: min(100%, 360px);
+    min-height: 44px;
+    border-bottom: 1px solid var(--orange);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.theme-option input[type="color"] {
+    width: 42px;
+    height: 32px;
+    padding: 2px;
+    border: 2px solid var(--orange);
+    background: transparent;
+    cursor: pointer;
+}
+
+.theme-reset {
+    min-height: 38px;
+    margin-top: 16px;
+    padding: 4px 10px;
+    border: 2px solid var(--orange);
+    background: transparent;
+    cursor: pointer;
+}
+
+.theme-reset:hover,
+.theme-reset:focus-visible {
+    background: var(--orange);
+    color: var(--background);
+}
+
 .game-player {
     position: fixed;
     inset: 0;
@@ -170,18 +213,18 @@ h1 {
 
 .container {
     display: grid;
-    grid-template-columns: repeat(4, 165px);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
     justify-content: center;
-    gap: 80px 47px;
-    max-width: 710px;
+    gap: 80px 24px;
+    max-width: 900px;
     margin: 46px auto 0;
     padding: 0 32px 48px;
 }
 
 .game-card {
     position: relative;
-    width: 165px;
-    height: 165px;
+    min-width: 0;
+    aspect-ratio: 1;
 }
 
 .game-card .game-name {
@@ -198,11 +241,11 @@ h1 {
 
 .game-card img {
     display: block;
-    width: 165px !important;
-    height: 165px !important;
-    border: 4px solid var(--orange) !important;
-    border-radius: 14px !important;
-    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border: 4px solid var(--orange);
+    border-radius: 14px;
+    object-fit: contain;
 }
 
 .game-buttons {
@@ -215,7 +258,7 @@ h1 {
     gap: 4px;
     width: 100%;
     padding: 5px 3px;
-    background: rgba(6, 56, 75, 0.9);
+    background: color-mix(in srgb, var(--background) 90%, transparent);
     opacity: 0;
     transform: translateY(100%);
     transition: opacity 150ms ease, transform 150ms ease;
@@ -266,6 +309,7 @@ input {
     pointer-events: none;
     width: 34px;
     height: 34px;
+    color: var(--yellow);
 }
 
 .search-input {
@@ -339,7 +383,8 @@ input {
     }
 
     .container {
-        grid-template-columns: repeat(2, 165px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 420px;
         margin-top: 28px;
         padding: 0 20px 40px;
     }
@@ -347,6 +392,7 @@ input {
 
 @media (max-width: 430px) {
     .container {
-        grid-template-columns: 165px;
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 240px;
     }
 }

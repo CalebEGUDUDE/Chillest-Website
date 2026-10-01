@@ -22,7 +22,10 @@
                 </nav>
                 <div id="game-controls">
                     <div class="input-wrapper">
-                        <img src="https://cdn.jsdelivr.net/gh/calebegudude/chillest-website-games/assets/images/search.png" class="input-icon" alt="">
+                        <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="10.8" cy="10.8" r="6.3" fill="none" stroke="currentColor" stroke-width="2.4"></circle>
+                            <path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2.4"></path>
+                        </svg>
                         <input id="search" class="search-input" placeholder="search..." aria-label="Search games">
                     </div>
                     <nav id="catagories" class="catagories" aria-label="Game categories"></nav>
@@ -49,6 +52,20 @@
                         <input id="cloak-website" type="text" placeholder="example.com" autocomplete="url">
                         <button id="reset-cloak-website" type="button">Use default</button>
                     </div>
+                    <h3 class="settings-subtitle">Theme</h3>
+                    <label class="theme-option" for="theme-background">
+                        <span>Background</span>
+                        <input id="theme-background" type="color" value="#06384b">
+                    </label>
+                    <label class="theme-option" for="theme-text">
+                        <span>Text and borders</span>
+                        <input id="theme-text" type="color" value="#ff8c00">
+                    </label>
+                    <label class="theme-option" for="theme-highlight">
+                        <span>Highlight</span>
+                        <input id="theme-highlight" type="color" value="#ffb000">
+                    </label>
+                    <button id="reset-theme" class="theme-reset" type="button">Reset theme</button>
                 </section>
             </main>
         </div>
