@@ -18,6 +18,7 @@
             <aside class="sidebar">
                 <nav class="page-nav" aria-label="Pages">
                     <button id="games-view-button" class="bar active" type="button" aria-pressed="true">Games</button>
+                    <button id="apps-view-button" class="bar" type="button" aria-pressed="false">Apps</button>
                     <button id="settings-view-button" class="bar" type="button" aria-pressed="false">Settings</button>
                 </nav>
                 <div id="game-controls">
@@ -37,6 +38,11 @@
                     <br>
                     <div class="container" id="container"></div>
                 </div>
+                <div id="apps-page" hidden>
+                    <br>
+                    <br>
+                    <div class="container" id="apps-container"></div>
+                </div>
                 <section id="settings-page" aria-labelledby="settings-title" hidden>
                     <h2 id="settings-title">Settings</h2>
                     <label class="setting-option" for="open-in-new-tab">
@@ -45,10 +51,10 @@
                     </label>
                     <label class="setting-option" for="cl0ak">
                         <input id="cl0ak" type="checkbox">
-                        <span>cl0ak</span>
+                        <span>Cl0ak</span>
                     </label>
                     <div class="tab-icon-setting">
-                        <label for="cloak-website">Website to cloak as</label>
+                        <label for="cloak-website">Website to cl0ak as</label>
                         <input id="cloak-website" type="text" placeholder="example.com" autocomplete="url">
                         <button id="reset-cloak-website" type="button">Use default</button>
                     </div>
@@ -66,6 +72,13 @@
                         <input id="theme-highlight" type="color" value="#ffb000">
                     </label>
                     <button id="reset-theme" class="theme-reset" type="button">Reset theme</button>
+                    <h3 class="settings-subtitle">Settings file</h3>
+                    <div class="settings-file-actions">
+                        <button id="export-settings" type="button">Export settings</button>
+                        <button id="import-settings" type="button">Import settings</button>
+                        <input id="settings-file" type="file" accept="application/json,.json" hidden>
+                    </div>
+                    <p id="settings-file-status" class="settings-file-status" role="status" aria-live="polite"></p>
                 </section>
             </main>
         </div>

@@ -156,9 +156,11 @@ const REPO_OWNER = 'CalebEGUDUDE';
 const REPO_NAME = 'Chillest-Website-Games';
 const GAMES_RELEASE = 'v1-0-0_release';
 const GAMES_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${GAMES_RELEASE}`;
+const APPS_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main`;
 
 const state = {
   games: [],
+  apps: [],
   selectedCategory: 'All',
   searchTerm: '',
   openInNewTab: true,
@@ -231,38 +233,46 @@ function renderCategoryButtons(categories) {
 }
 
 function renderGames() {
-  const container = document.getElementById('container');
+  renderItems(state.games, document.getElementById('container'), 'games');
+}
+
+function renderApps() {
+  renderItems(state.apps, document.getElementById('apps-container'), 'apps');
+}
+
+function renderItems(items, container, itemType) {
 
   if (!container) return;
 
   const searchText = state.searchTerm.trim().toLowerCase();
-  const filteredGames = state.games.filter(game => {
-    const isHidden = state.hiddenCategories.has(game.category);
-    const matchesCategory = state.selectedCategory === 'All' || game.category === state.selectedCategory;
-    const matchesSearch = !searchText || `${game.name} ${game.category}`.toLowerCase().includes(searchText);
+  const filteredItems = items.filter(item => {
+    const isHidden = itemType === 'games' && state.hiddenCategories.has(item.category);
+    const matchesCategory = itemType !== 'games' || state.selectedCategory === 'All' || item.category === state.selectedCategory;
+    const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
     return !isHidden && matchesCategory && matchesSearch;
   });
 
-  if (filteredGames.length === 0) {
-    container.innerHTML = '<p>No games found.</p>';
+  if (filteredItems.length === 0) {
+    container.innerHTML = `<p>No ${itemType} found.</p>`;
     return;
   }
 
   container.innerHTML = '';
 
-  filteredGames.forEach(game => {
-    const matchingIcon = game.icon;
-    const fallbackUrl = `https://via.placeholder.com/200?text=${encodeURIComponent(game.name)}`;
-    const rawIconUrl = matchingIcon ? `${GAMES_BASE_URL}/${matchingIcon}` : fallbackUrl;
+  filteredItems.forEach(item => {
+    const matchingIcon = item.icon;
+    const baseUrl = itemType === 'apps' ? APPS_BASE_URL : GAMES_BASE_URL;
+    const fallbackUrl = `https://via.placeholder.com/200?text=${encodeURIComponent(item.name)}`;
+    const rawIconUrl = matchingIcon ? `${baseUrl}/${matchingIcon}` : fallbackUrl;
     const downloadButton = state.openInNewTab ? '<button class="download" style="cursor: pointer;">Download</button>' : '';
 
     const gameCard = document.createElement('div');
     gameCard.className = 'game-card';
     gameCard.innerHTML = `
-      <div class="game-name">${game.name}</div>
+       <div class="game-name">${item.name}</div>
       <img src="${rawIconUrl}"
            onerror="this.src='${fallbackUrl}';"
-           alt="${game.name}">
+         alt="${item.name}">
       <div class="game-buttons">
         ${downloadButton}
         <input type="button" value="Play" class="play" style="cursor: pointer;">
@@ -271,9 +281,9 @@ function renderGames() {
 
     const downloadControl = gameCard.querySelector('.download');
     if (downloadControl) {
-      downloadControl.addEventListener('click', () => downloadGame(game.url, game.fileName));
+      downloadControl.addEventListener('click', () => downloadGame(item.url, item.fileName));
     }
-    gameCard.querySelector('.play').addEventListener('click', () => playGame(game.url));
+    gameCard.querySelector('.play').addEventListener('click', () => playGame(item.url));
 
     container.appendChild(gameCard);
   });
@@ -385,6 +395,91 @@ const THEME_SETTINGS = [
   { id: 'theme-highlight', property: '--yellow', storageKey: 'themeHighlight', defaultColor: '#ffb000' }
 ];
 
+function getSettingsExport() {
+  return {
+    version: 1,
+    openInNewTab: document.getElementById('open-in-new-tab')?.checked === true,
+    cl0ak: document.getElementById('cl0ak')?.checked === true,
+    cl0akWebsite: document.getElementById('cloak-website')?.value || '',
+    theme: Object.fromEntries(THEME_SETTINGS.map(setting => [
+      setting.storageKey,
+      document.getElementById(setting.id)?.value || setting.defaultColor
+    ]))
+  };
+}
+
+function isValidSettingsExport(settings) {
+  if (!settings || typeof settings !== 'object' || settings.version !== 1) return false;
+  if (typeof settings.openInNewTab !== 'boolean' || typeof settings.cl0ak !== 'boolean' || typeof settings.cl0akWebsite !== 'string') return false;
+  if (!settings.theme || typeof settings.theme !== 'object') return false;
+
+  return THEME_SETTINGS.every(setting => /^#[\da-f]{6}$/i.test(settings.theme[setting.storageKey]));
+}
+
+function setSettingsFileStatus(message) {
+  const status = document.getElementById('settings-file-status');
+  if (status) status.textContent = message;
+}
+
+function setupSettingsFileControls() {
+  const exportButton = document.getElementById('export-settings');
+  const importButton = document.getElementById('import-settings');
+  const fileInput = document.getElementById('settings-file');
+  if (!exportButton || !importButton || !fileInput) return;
+
+  exportButton.addEventListener('click', () => {
+    const file = new Blob([JSON.stringify(getSettingsExport(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'chillest-settings.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    setSettingsFileStatus('Settings exported.');
+  });
+
+  importButton.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (!file) return;
+
+    try {
+      const settings = JSON.parse(await file.text());
+      if (!isValidSettingsExport(settings)) throw new Error('Invalid settings file.');
+
+      const openInNewTabInput = document.getElementById('open-in-new-tab');
+      const cl0akInput = document.getElementById('cl0ak');
+      const cloakWebsiteInput = document.getElementById('cloak-website');
+      const website = parseCloakWebsite(settings.cl0akWebsite);
+      if (settings.cl0akWebsite && !website) throw new Error('Invalid cloak website.');
+
+      openInNewTabInput.checked = settings.openInNewTab;
+      openInNewTabInput.dispatchEvent(new Event('change'));
+      THEME_SETTINGS.forEach(setting => {
+        const input = document.getElementById(setting.id);
+        input.value = settings.theme[setting.storageKey];
+        input.dispatchEvent(new Event('input'));
+      });
+
+      cloakWebsiteInput.value = website ? website.origin : '';
+      cl0akInput.checked = settings.cl0ak;
+      if (website) {
+        cloakWebsiteInput.dispatchEvent(new Event('change'));
+        if (!settings.cl0ak) {
+          cl0akInput.checked = false;
+          cl0akInput.dispatchEvent(new Event('change'));
+        }
+      } else {
+        cl0akInput.dispatchEvent(new Event('change'));
+      }
+      setSettingsFileStatus('Settings imported.');
+    } catch (error) {
+      setSettingsFileStatus(`Could not import settings: ${error.message}`);
+    }
+  });
+}
+
 function setupThemeSettings() {
   const root = document.documentElement;
   const colorInputs = THEME_SETTINGS.map(setting => ({
@@ -434,17 +529,20 @@ function setupThemeSettings() {
 
 function setupPageNavigation() {
   setupThemeSettings();
+  setupSettingsFileControls();
   const gamesButton = document.getElementById('games-view-button');
+  const appsButton = document.getElementById('apps-view-button');
   const settingsButton = document.getElementById('settings-view-button');
   const gameControls = document.getElementById('game-controls');
   const gamesPage = document.getElementById('games-page');
+  const appsPage = document.getElementById('apps-page');
   const settingsPage = document.getElementById('settings-page');
   const openInNewTabInput = document.getElementById('open-in-new-tab');
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
 
-  if (!gamesButton || !settingsButton || !gameControls || !gamesPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton) return;
+  if (!gamesButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton) return;
 
   let savedCloakWebsite = '';
   try {
@@ -468,18 +566,24 @@ function setupPageNavigation() {
     }
   }
 
-  const showPage = settingsVisible => {
-    gameControls.hidden = settingsVisible;
-    gamesPage.hidden = settingsVisible;
-    settingsPage.hidden = !settingsVisible;
-    gamesButton.classList.toggle('active', !settingsVisible);
-    settingsButton.classList.toggle('active', settingsVisible);
-    gamesButton.setAttribute('aria-pressed', String(!settingsVisible));
-    settingsButton.setAttribute('aria-pressed', String(settingsVisible));
+  const showPage = page => {
+    const isGames = page === 'games';
+    const isApps = page === 'apps';
+    gameControls.hidden = !isGames;
+    gamesPage.hidden = !isGames;
+    appsPage.hidden = !isApps;
+    settingsPage.hidden = isGames || isApps;
+    gamesButton.classList.toggle('active', isGames);
+    appsButton.classList.toggle('active', isApps);
+    settingsButton.classList.toggle('active', !isGames && !isApps);
+    gamesButton.setAttribute('aria-pressed', String(isGames));
+    appsButton.setAttribute('aria-pressed', String(isApps));
+    settingsButton.setAttribute('aria-pressed', String(!isGames && !isApps));
   };
 
-  gamesButton.addEventListener('click', () => showPage(false));
-  settingsButton.addEventListener('click', () => showPage(true));
+  gamesButton.addEventListener('click', () => showPage('games'));
+  appsButton.addEventListener('click', () => showPage('apps'));
+  settingsButton.addEventListener('click', () => showPage('settings'));
   openInNewTabInput.addEventListener('change', () => {
     state.openInNewTab = openInNewTabInput.checked;
     renderGames();
@@ -583,6 +687,45 @@ async function loadGames() {
   }
 }
 
+async function loadApps() {
+  const container = document.getElementById('apps-container');
+  if (!container) return;
+
+  container.innerHTML = '<p>Loading apps...</p>';
+
+  try {
+    const response = await fetch(`${APPS_BASE_URL}/apps/apps.json`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Unable to load app list (${response.status})`);
+
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML = '<p>No apps found in apps/apps.json</p>';
+      return;
+    }
+
+    state.apps = data.filter(item => {
+      return item && typeof item.name === 'string' && item.name.trim() && typeof item.html === 'string' && item.html.trim();
+    }).map(item => {
+      const filePath = item.html;
+      const fileName = filePath.split('/').pop();
+      const iconPath = typeof item.icon === 'string' ? item.icon.replace(/^\/+/, '') : null;
+
+      return {
+        name: item.name.trim(),
+        category: 'Apps',
+        fileName,
+        url: `${APPS_BASE_URL}/${filePath}`,
+        icon: iconPath
+      };
+    });
+
+    renderApps();
+  } catch (error) {
+    console.error('Failed to load apps:', error);
+    container.innerHTML = `<p style="color: red;">Error loading apps: ${error.message}</p>`;
+  }
+}
+
 const SPLASHES_URL = 'https://raw.githubusercontent.com/CalebEGUDUDE/Chillest-Website-Games/main/assets/text/splashes.json';
 
 function getSplashPool(payload) {
@@ -621,5 +764,6 @@ async function loadSplash() {
 document.addEventListener('DOMContentLoaded', () => {
   setupPageNavigation();
   loadGames();
+  loadApps();
   loadSplash();
 });

@@ -119,6 +119,35 @@ h1 {
     color: var(--background);
 }
 
+.settings-file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.settings-file-actions button {
+    min-height: 38px;
+    padding: 4px 10px;
+    border: 2px solid var(--orange);
+    background: transparent;
+    color: var(--orange);
+    font: inherit;
+    cursor: pointer;
+}
+
+.settings-file-actions button:hover,
+.settings-file-actions button:focus-visible {
+    background: var(--orange);
+    color: var(--background);
+}
+
+.settings-file-status {
+    min-height: 1.25em;
+    margin: 10px 0 0;
+    color: var(--yellow);
+}
+
 .game-player {
     position: fixed;
     inset: 0;
