@@ -154,18 +154,25 @@ function playGame(url) {
 
 const REPO_OWNER = 'CalebEGUDUDE';
 const REPO_NAME = 'Chillest-Website-Games';
-const GAMES_RELEASE = 'v1-0-0_release';
-const GAMES_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${GAMES_RELEASE}`;
+const GAMES_FALLBACK_REF = 'main';
+const GAMES_TAGS_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/tags?per_page=100`;
 const APPS_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main`;
 
 const state = {
   games: [],
   apps: [],
+  gameVersion: 'latest',
+  gameRef: GAMES_FALLBACK_REF,
+  gameVersions: [],
   selectedCategory: 'All',
   searchTerm: '',
   openInNewTab: true,
   hiddenCategories: new Set(['DEBUG'])
 };
+
+function getGamesBaseUrl() {
+  return `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${state.gameRef}`;
+}
 
 function getGameCategory(filePath) {
   const parts = filePath.split('/');
@@ -261,7 +268,7 @@ function renderItems(items, container, itemType) {
 
   filteredItems.forEach(item => {
     const matchingIcon = item.icon;
-    const baseUrl = itemType === 'apps' ? APPS_BASE_URL : GAMES_BASE_URL;
+    const baseUrl = itemType === 'apps' ? APPS_BASE_URL : getGamesBaseUrl();
     const fallbackUrl = `https://via.placeholder.com/200?text=${encodeURIComponent(item.name)}`;
     const rawIconUrl = matchingIcon ? `${baseUrl}/${matchingIcon}` : fallbackUrl;
     const downloadButton = state.openInNewTab ? '<button class="download" style="cursor: pointer;">Download</button>' : '';
@@ -401,6 +408,7 @@ function getSettingsExport() {
     openInNewTab: document.getElementById('open-in-new-tab')?.checked === true,
     cl0ak: document.getElementById('cl0ak')?.checked === true,
     cl0akWebsite: document.getElementById('cloak-website')?.value || '',
+    gameVersion: document.getElementById('game-version')?.value || 'latest',
     theme: Object.fromEntries(THEME_SETTINGS.map(setting => [
       setting.storageKey,
       document.getElementById(setting.id)?.value || setting.defaultColor
@@ -411,6 +419,7 @@ function getSettingsExport() {
 function isValidSettingsExport(settings) {
   if (!settings || typeof settings !== 'object' || settings.version !== 1) return false;
   if (typeof settings.openInNewTab !== 'boolean' || typeof settings.cl0ak !== 'boolean' || typeof settings.cl0akWebsite !== 'string') return false;
+  if (settings.gameVersion !== undefined && typeof settings.gameVersion !== 'string') return false;
   if (!settings.theme || typeof settings.theme !== 'object') return false;
 
   return THEME_SETTINGS.every(setting => /^#[\da-f]{6}$/i.test(settings.theme[setting.storageKey]));
@@ -451,11 +460,14 @@ function setupSettingsFileControls() {
       const openInNewTabInput = document.getElementById('open-in-new-tab');
       const cl0akInput = document.getElementById('cl0ak');
       const cloakWebsiteInput = document.getElementById('cloak-website');
+      const gameVersionInput = document.getElementById('game-version');
       const website = parseCloakWebsite(settings.cl0akWebsite);
       if (settings.cl0akWebsite && !website) throw new Error('Invalid cloak website.');
 
       openInNewTabInput.checked = settings.openInNewTab;
       openInNewTabInput.dispatchEvent(new Event('change'));
+      gameVersionInput.value = settings.gameVersion || 'latest';
+      gameVersionInput.dispatchEvent(new Event('change'));
       THEME_SETTINGS.forEach(setting => {
         const input = document.getElementById(setting.id);
         input.value = settings.theme[setting.storageKey];
@@ -541,8 +553,9 @@ function setupPageNavigation() {
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
+  const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton) return;
+  if (!gamesButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -584,6 +597,20 @@ function setupPageNavigation() {
   gamesButton.addEventListener('click', () => showPage('games'));
   appsButton.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
+  gameVersionInput.addEventListener('change', () => {
+    const selectedVersion = gameVersionInput.value === 'latest' || state.gameVersions.includes(gameVersionInput.value)
+      ? gameVersionInput.value
+      : 'latest';
+    state.gameVersion = selectedVersion;
+    state.gameRef = selectedVersion === 'latest' ? (state.gameVersions[0] || GAMES_FALLBACK_REF) : selectedVersion;
+    gameVersionInput.value = selectedVersion;
+    try {
+      localStorage.setItem('gameVersion', selectedVersion);
+    } catch (error) {
+      console.warn('Unable to save game version:', error);
+    }
+    loadGames();
+  });
   openInNewTabInput.addEventListener('change', () => {
     state.openInNewTab = openInNewTabInput.checked;
     renderGames();
@@ -644,7 +671,8 @@ async function loadGames() {
 
   container.innerHTML = '<p>Loading games...</p>';
 
-  if (searchInput) {
+  if (searchInput && searchInput.dataset.bound !== 'true') {
+    searchInput.dataset.bound = 'true';
     searchInput.addEventListener('input', event => {
       state.searchTerm = event.target.value;
       renderGames();
@@ -652,7 +680,8 @@ async function loadGames() {
   }
 
   try {
-    const response = await fetch(`${GAMES_BASE_URL}/games/games.json`, { cache: 'no-store' });
+    const gamesBaseUrl = getGamesBaseUrl();
+    const response = await fetch(`${gamesBaseUrl}/games/games.json`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Unable to load game list (${response.status})`);
 
     const data = await response.json();
@@ -674,7 +703,7 @@ async function loadGames() {
         name: item.name.trim(),
         category,
         fileName,
-        url: filePath ? `${GAMES_BASE_URL}/${filePath}` : null,
+        url: filePath ? `${gamesBaseUrl}/${filePath}` : null,
         icon: iconPath
       };
     });
@@ -685,6 +714,36 @@ async function loadGames() {
     console.error('Failed to load games:', error);
     container.innerHTML = `<p style="color: red;">Error loading games: ${error.message}</p>`;
   }
+}
+
+async function loadGameVersions() {
+  const versionInput = document.getElementById('game-version');
+  if (!versionInput) return;
+
+  let savedVersion = 'latest';
+  try {
+    savedVersion = localStorage.getItem('gameVersion') || 'latest';
+  } catch (error) {
+    console.warn('Unable to load game version:', error);
+  }
+
+  try {
+    const response = await fetch(GAMES_TAGS_URL, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Version request failed (${response.status})`);
+    const tags = await response.json();
+    state.gameVersions = Array.isArray(tags)
+      ? tags.filter(tag => tag && typeof tag.name === 'string' && tag.name.trim()).map(tag => tag.name.trim())
+      : [];
+  } catch (error) {
+    console.warn('Unable to load game versions, using main:', error);
+    state.gameVersions = [];
+  }
+
+  versionInput.replaceChildren(new Option('Latest', 'latest'));
+  state.gameVersions.forEach(version => versionInput.appendChild(new Option(version, version)));
+  state.gameVersion = savedVersion === 'latest' || state.gameVersions.includes(savedVersion) ? savedVersion : 'latest';
+  state.gameRef = state.gameVersion === 'latest' ? (state.gameVersions[0] || GAMES_FALLBACK_REF) : state.gameVersion;
+  versionInput.value = state.gameVersion;
 }
 
 async function loadApps() {
@@ -763,7 +822,7 @@ async function loadSplash() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupPageNavigation();
-  loadGames();
+  loadGameVersions().then(loadGames);
   loadApps();
   loadSplash();
 });

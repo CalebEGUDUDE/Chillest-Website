@@ -209,6 +209,30 @@ h1 {
     cursor: pointer;
 }
 
+.game-version-setting {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(100%, 360px);
+    margin-top: 28px;
+    font-size: 1.1rem;
+}
+
+.game-version-setting select {
+    min-height: 38px;
+    padding: 4px 8px;
+    border: 2px solid var(--orange);
+    background: var(--background);
+    color: var(--orange);
+    font: inherit;
+    cursor: pointer;
+}
+
+.game-version-setting select:focus {
+    border-color: var(--yellow);
+    outline: none;
+}
+
 .tab-icon-setting {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
