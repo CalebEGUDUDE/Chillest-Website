@@ -38,8 +38,34 @@ h1 {
 
 #splash {
     margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--yellow);
     font-size: 1.25rem;
+    cursor: pointer;
+}
+
+#splash:hover {
+    color: var(--orange);
+}
+
+#splash:focus-visible {
+    outline: 2px solid var(--yellow);
+    outline-offset: 4px;
+}
+
+.flashbang-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: #fff;
+    opacity: 1;
+    transition: opacity 6400ms ease-out;
+}
+
+.flashbang-overlay.fade-out {
+    opacity: 0;
 }
 
 .site-layout {
@@ -346,6 +372,110 @@ input {
     cursor: pointer;
 }
 
+.ugs-toolbar {
+    padding: 20px 24px 0;
+}
+
+.ugs-toolbar input {
+    width: min(100%, 420px);
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 2px solid var(--orange);
+    background: transparent;
+}
+
+.ugs-layout {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 20px;
+    padding: 20px 24px 40px;
+}
+
+.ugs-sidebar {
+    position: sticky;
+    top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: start;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+}
+
+.ugs-sidebar .sidebar-btn {
+    min-height: 30px;
+    border: 1px solid var(--orange);
+    background: transparent;
+    cursor: pointer;
+}
+
+.ugs-sidebar .sidebar-btn.empty {
+    opacity: 0.35;
+}
+
+.ugs-sections {
+    min-width: 0;
+}
+
+.ugs-sections .letter-section {
+    margin-bottom: 26px;
+}
+
+.ugs-sections .letter-header {
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--orange);
+    font-size: 1.4rem;
+}
+
+.ugs-sections .buttons-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
+    gap: 10px;
+    align-items: stretch;
+}
+
+.ugs-game-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--orange);
+    background: color-mix(in srgb, var(--background) 88%, white);
+}
+
+.ugs-game-name {
+    min-height: 2.5em;
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.95rem;
+    font-weight: 400;
+}
+
+.ugs-game-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.ugs-game-actions button {
+    min-width: 0;
+    min-height: 32px;
+    flex: 1 1 0;
+    padding: 3px;
+    border: 1px solid var(--orange);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.72rem;
+}
+
+.ugs-game-actions button:hover,
+.ugs-game-actions button:focus-visible {
+    background: var(--orange);
+    color: var(--background);
+}
+
 .input-wrapper {
     height: 55px;
     border: 4px solid var(--orange);
@@ -440,6 +570,16 @@ input {
         max-width: 420px;
         margin-top: 28px;
         padding: 0 20px 40px;
+    }
+
+    .ugs-layout {
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px 12px 32px;
+    }
+
+    .ugs-toolbar {
+        padding: 16px 12px 0;
     }
 }
 

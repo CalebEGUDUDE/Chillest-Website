@@ -12,12 +12,13 @@
     <body>
         <header class="site-header">
             <h1>Chillest Website</h1>
-            <p id="splash"></p>
+            <button id="splash" type="button" aria-label="Show another splash"></button>
         </header>
         <div class="site-layout">
             <aside class="sidebar">
                 <nav class="page-nav" aria-label="Pages">
                     <button id="games-view-button" class="bar active" type="button" aria-pressed="true">Games</button>
+                    <button id="ugs-view-button" class="bar" type="button" aria-pressed="false">UGS</button>
                     <button id="apps-view-button" class="bar" type="button" aria-pressed="false">Apps</button>
                     <button id="settings-view-button" class="bar" type="button" aria-pressed="false">Settings</button>
                 </nav>
@@ -38,6 +39,15 @@
                     <br>
                     <div class="container" id="container"></div>
                 </div>
+                <section id="ugs-page" hidden aria-label="UGS games">
+                    <div class="ugs-toolbar">
+                        <input id="ugs-search" type="search" placeholder="Search UGS games..." aria-label="Search UGS games">
+                    </div>
+                    <div class="ugs-layout">
+                        <nav id="sidebar" class="ugs-sidebar" aria-label="UGS game letters"></nav>
+                        <div id="sections-container" class="ugs-sections"></div>
+                    </div>
+                </section>
                 <div id="apps-page" hidden>
                     <br>
                     <br>

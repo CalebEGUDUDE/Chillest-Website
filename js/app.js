@@ -157,6 +157,7 @@ const REPO_NAME = 'Chillest-Website-Games';
 const GAMES_FALLBACK_REF = 'main';
 const GAMES_TAGS_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/tags?per_page=100`;
 const APPS_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main`;
+const UGS_FILES_BASE_URL = 'https://cdn.jsdelivr.net/gh/bubbls/ugs-singlefile@main/UGS-Files';
 
 const state = {
   games: [],
@@ -169,6 +170,8 @@ const state = {
   openInNewTab: true,
   hiddenCategories: new Set(['DEBUG'])
 };
+
+let ugsGamesLoaded = false;
 
 function getGamesBaseUrl() {
   return `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${state.gameRef}`;
@@ -294,6 +297,77 @@ function renderItems(items, container, itemType) {
 
     container.appendChild(gameCard);
   });
+}
+
+function renderUgsGames() {
+  const searchInput = document.getElementById('ugs-search');
+  const buttonsContainers = document.querySelectorAll('#sections-container .buttons-container');
+
+  buttonsContainers.forEach(buttonsContainer => {
+    const originalButtons = [...buttonsContainer.querySelectorAll('input[type="button"]')];
+    if (originalButtons.length === 0) return;
+
+    const gameCards = originalButtons.map(originalButton => {
+      const file = originalButton.value;
+      const fileName = file.includes('.') && file.lastIndexOf('.') > 0 ? file : `${file}.html`;
+      const url = `${UGS_FILES_BASE_URL}/${encodeURIComponent(fileName)}`;
+      const card = document.createElement('article');
+      card.className = 'ugs-game-card';
+
+      const name = document.createElement('h3');
+      name.className = 'ugs-game-name';
+      name.textContent = file.replace(/^cl/i, '').replace(/\.html?$/i, '');
+
+      const actions = document.createElement('div');
+      actions.className = 'ugs-game-actions';
+      const playButton = document.createElement('button');
+      playButton.type = 'button';
+      playButton.textContent = 'Play';
+      playButton.addEventListener('click', () => playGame(url));
+      const downloadButton = document.createElement('button');
+      downloadButton.type = 'button';
+      downloadButton.textContent = 'Download';
+      downloadButton.addEventListener('click', () => downloadGame(url, fileName));
+
+      actions.append(playButton, downloadButton);
+      card.append(name, actions);
+      return card;
+    });
+
+    buttonsContainer.replaceChildren(...gameCards);
+  });
+
+  if (searchInput && searchInput.dataset.bound !== 'true') {
+    searchInput.dataset.bound = 'true';
+    searchInput.addEventListener('input', () => {
+      const searchText = searchInput.value.trim().toLowerCase();
+      document.querySelectorAll('#sections-container .letter-section').forEach(section => {
+        const sectionCards = [...section.querySelectorAll('.ugs-game-card')];
+        const visibleCards = sectionCards.filter(card => {
+          const matches = card.querySelector('.ugs-game-name').textContent.toLowerCase().includes(searchText);
+          card.hidden = !matches;
+          return matches;
+        });
+        section.hidden = sectionCards.length > 0 && visibleCards.length === 0;
+      });
+    });
+  }
+}
+
+function loadUgsGames() {
+  if (ugsGamesLoaded) return;
+
+  const sections = document.getElementById('sections-container');
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/gh/bubbls/ugs-singlefile@main/games.js';
+  script.onload = () => {
+    renderUgsGames();
+    ugsGamesLoaded = true;
+  };
+  script.onerror = () => {
+    sections.textContent = 'Unable to load UGS games.';
+  };
+  document.body.appendChild(script);
 }
 
 const DEFAULT_TAB_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#06384b"/><path d="M12 18h40v28H12z" fill="none" stroke="#ff8c00" stroke-width="4"/><path d="M12 26h40" stroke="#ff8c00" stroke-width="4"/></svg>')}`;
@@ -543,10 +617,12 @@ function setupPageNavigation() {
   setupThemeSettings();
   setupSettingsFileControls();
   const gamesButton = document.getElementById('games-view-button');
+  const ugsButton = document.getElementById('ugs-view-button');
   const appsButton = document.getElementById('apps-view-button');
   const settingsButton = document.getElementById('settings-view-button');
   const gameControls = document.getElementById('game-controls');
   const gamesPage = document.getElementById('games-page');
+  const ugsPage = document.getElementById('ugs-page');
   const appsPage = document.getElementById('apps-page');
   const settingsPage = document.getElementById('settings-page');
   const openInNewTabInput = document.getElementById('open-in-new-tab');
@@ -555,7 +631,7 @@ function setupPageNavigation() {
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -581,20 +657,27 @@ function setupPageNavigation() {
 
   const showPage = page => {
     const isGames = page === 'games';
+    const isUgs = page === 'ugs';
     const isApps = page === 'apps';
+    const isSettings = page === 'settings';
     gameControls.hidden = !isGames;
     gamesPage.hidden = !isGames;
+    ugsPage.hidden = !isUgs;
     appsPage.hidden = !isApps;
-    settingsPage.hidden = isGames || isApps;
+    settingsPage.hidden = !isSettings;
+    if (isUgs) loadUgsGames();
     gamesButton.classList.toggle('active', isGames);
+    ugsButton.classList.toggle('active', isUgs);
     appsButton.classList.toggle('active', isApps);
-    settingsButton.classList.toggle('active', !isGames && !isApps);
+    settingsButton.classList.toggle('active', isSettings);
     gamesButton.setAttribute('aria-pressed', String(isGames));
+    ugsButton.setAttribute('aria-pressed', String(isUgs));
     appsButton.setAttribute('aria-pressed', String(isApps));
-    settingsButton.setAttribute('aria-pressed', String(!isGames && !isApps));
+    settingsButton.setAttribute('aria-pressed', String(isSettings));
   };
 
   gamesButton.addEventListener('click', () => showPage('games'));
+  ugsButton.addEventListener('click', () => showPage('ugs'));
   appsButton.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
   gameVersionInput.addEventListener('change', () => {
@@ -786,6 +869,7 @@ async function loadApps() {
 }
 
 const SPLASHES_URL = 'https://raw.githubusercontent.com/CalebEGUDUDE/Chillest-Website-Games/main/assets/text/splashes.json';
+let splashPool = [];
 
 function getSplashPool(payload) {
   if (Array.isArray(payload)) return payload.filter(item => typeof item === 'string');
@@ -795,9 +879,46 @@ function getSplashPool(payload) {
   return [];
 }
 
+function showRandomSplash() {
+  const splashElement = document.getElementById('splash');
+  if (!splashElement || splashPool.length === 0) return;
+
+  const otherSplashes = splashPool.filter(splash => splash !== splashElement.textContent);
+  const choices = otherSplashes.length > 0 ? otherSplashes : splashPool;
+  splashElement.textContent = choices[Math.floor(Math.random() * choices.length)];
+  splashElement.setAttribute('aria-label', 'Show another splash');
+}
+
+function showFlashbang() {
+  const splashElement = document.getElementById('splash');
+  if (splashElement) {
+    splashElement.textContent = 'flashbang!!!!! 🧨';
+    splashElement.setAttribute('aria-label', 'flashbang!!!!!');
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'flashbang-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(overlay);
+
+  window.setTimeout(() => {
+    overlay.classList.add('fade-out');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+  }, 1000);
+}
+
+function rerollSplash() {
+  if (splashPool.length === 0) return;
+
+  showRandomSplash();
+  if (Math.random() < 1 / 100) showFlashbang();
+}
+
 async function loadSplash() {
   const splashElement = document.getElementById('splash');
   if (!splashElement) return;
+
+  splashElement.addEventListener('click', rerollSplash);
 
   try {
     const response = await fetch(SPLASHES_URL, { cache: 'no-store' });
@@ -806,14 +927,13 @@ async function loadSplash() {
     }
 
     const payload = await response.json();
-    const splashes = getSplashPool(payload);
+    splashPool = getSplashPool(payload);
 
-    if (splashes.length === 0) {
+    if (splashPool.length === 0) {
       throw new Error('No splash entries were returned');
     }
 
-    const randomSplash = splashes[Math.floor(Math.random() * splashes.length)];
-    splashElement.textContent = randomSplash;
+    showRandomSplash();
   } catch (error) {
     console.error('Failed to load splash:', error);
     splashElement.textContent = 'Loading...';
