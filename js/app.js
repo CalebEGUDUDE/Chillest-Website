@@ -261,6 +261,9 @@ function renderItems(items, container, itemType) {
     const matchesSearch = !searchText || `${item.name} ${item.category}`.toLowerCase().includes(searchText);
     return !isHidden && matchesCategory && matchesSearch;
   });
+  if (itemType === 'games') {
+    filteredItems.sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: 'base', numeric: true }));
+  }
 
   if (filteredItems.length === 0) {
     container.innerHTML = `<p>No ${itemType} found.</p>`;
