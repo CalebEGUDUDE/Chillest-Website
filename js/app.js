@@ -628,6 +628,7 @@ function setupPageNavigation() {
   const ugsPage = document.getElementById('ugs-page');
   const appsPage = document.getElementById('apps-page');
   const settingsPage = document.getElementById('settings-page');
+  const reloadGamesButton = document.getElementById('reload-games');
   const openInNewTabInput = document.getElementById('open-in-new-tab');
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
@@ -683,8 +684,11 @@ function setupPageNavigation() {
   ugsButton.addEventListener('click', () => showPage('ugs'));
   appsButton.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
+  reloadGamesButton?.addEventListener('click', () => loadGames());
   gameVersionInput.addEventListener('change', () => {
-    const selectedVersion = gameVersionInput.value === 'latest' || state.gameVersions.includes(gameVersionInput.value)
+    const selectedVersion = gameVersionInput.value === 'latest'
+      || gameVersionInput.value === 'main'
+      || state.gameVersions.includes(gameVersionInput.value)
       ? gameVersionInput.value
       : 'latest';
     state.gameVersion = selectedVersion;
@@ -818,7 +822,7 @@ async function loadGameVersions() {
     if (!response.ok) throw new Error(`Version request failed (${response.status})`);
     const tags = await response.json();
     state.gameVersions = Array.isArray(tags)
-      ? tags.filter(tag => tag && typeof tag.name === 'string' && tag.name.trim()).map(tag => tag.name.trim())
+      ? tags.filter(tag => tag && typeof tag.name === 'string' && tag.name.trim() && tag.name.trim() !== 'main').map(tag => tag.name.trim())
       : [];
   } catch (error) {
     console.warn('Unable to load game versions, using main:', error);
@@ -826,9 +830,14 @@ async function loadGameVersions() {
   }
 
   versionInput.replaceChildren(new Option('Latest', 'latest'));
+  versionInput.appendChild(new Option('Main', 'main'));
   state.gameVersions.forEach(version => versionInput.appendChild(new Option(version, version)));
-  state.gameVersion = savedVersion === 'latest' || state.gameVersions.includes(savedVersion) ? savedVersion : 'latest';
-  state.gameRef = state.gameVersion === 'latest' ? (state.gameVersions[0] || GAMES_FALLBACK_REF) : state.gameVersion;
+  state.gameVersion = savedVersion === 'latest' || savedVersion === 'main' || state.gameVersions.includes(savedVersion) ? savedVersion : 'latest';
+  state.gameRef = state.gameVersion === 'latest'
+    ? (state.gameVersions[0] || GAMES_FALLBACK_REF)
+    : state.gameVersion === 'main'
+      ? GAMES_FALLBACK_REF
+      : state.gameVersion;
   versionInput.value = state.gameVersion;
 }
 
