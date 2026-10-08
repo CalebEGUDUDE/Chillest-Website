@@ -563,6 +563,10 @@ input {
     cursor: pointer;
 }
 
+.suggest-games-link {
+    text-decoration: none;
+}
+
 .bar.active {
     color: var(--yellow);
 }
