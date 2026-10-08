@@ -75,8 +75,16 @@ h1 {
 }
 
 .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-self: start;
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
     padding: 9px 20px;
     border-right: 4px solid var(--orange);
+    background: var(--background);
 }
 
 .page-nav {
@@ -295,13 +303,16 @@ h1 {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
     justify-content: center;
     gap: 80px 24px;
-    max-width: 900px;
+    max-width: none;
     margin: 46px auto 0;
     padding: 0 32px 48px;
 }
 
 .game-card {
     position: relative;
+    width: 100%;
+    max-width: 240px;
+    justify-self: center;
     min-width: 0;
     aspect-ratio: 1;
 }
@@ -370,18 +381,6 @@ input {
     height: 27px;
     width: 78px;
     cursor: pointer;
-}
-
-.ugs-toolbar {
-    padding: 20px 24px 0;
-}
-
-.ugs-toolbar input {
-    width: min(100%, 420px);
-    min-height: 42px;
-    padding: 8px 12px;
-    border: 2px solid var(--orange);
-    background: transparent;
 }
 
 .ugs-layout {
@@ -476,12 +475,45 @@ input {
     color: var(--background);
 }
 
+.game-search-controls {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
 .input-wrapper {
+    min-width: 0;
+    flex: 1;
     height: 55px;
     border: 4px solid var(--orange);
     border-radius: 14px;
     overflow: hidden;
     position: relative;
+}
+
+.reload-games-button {
+    display: grid;
+    width: 55px;
+    height: 55px;
+    flex: 0 0 55px;
+    place-items: center;
+    padding: 0;
+    border: 4px solid var(--orange);
+    border-radius: 14px;
+    background: transparent;
+    color: var(--orange);
+    cursor: pointer;
+}
+
+.reload-games-button svg {
+    width: 30px;
+    height: 30px;
+}
+
+.reload-games-button:hover,
+.reload-games-button:focus-visible {
+    background: var(--orange);
+    color: var(--background);
 }
 
 .input-icon {
@@ -515,7 +547,11 @@ input {
     flex-direction: column;
     align-items: flex-start;
     gap: 9px;
+    max-height: min(50vh, 480px);
     margin-top: 35px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
 }
 
 .bar {
@@ -545,6 +581,7 @@ input {
     }
 
     .sidebar {
+        min-height: 0;
         border-right: 0;
         border-bottom: 4px solid var(--orange);
         padding: 16px 20px;
@@ -554,6 +591,16 @@ input {
         flex-direction: row;
         margin-top: 16px;
         gap: 16px;
+        max-height: none;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        padding: 4px 0 10px;
+        white-space: nowrap;
+    }
+
+    .catagories .bar {
+        flex: 0 0 auto;
     }
 
     .page-nav {
@@ -578,9 +625,6 @@ input {
         padding: 16px 12px 32px;
     }
 
-    .ugs-toolbar {
-        padding: 16px 12px 0;
-    }
 }
 
 @media (max-width: 430px) {

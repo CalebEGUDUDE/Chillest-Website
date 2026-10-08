@@ -168,6 +168,8 @@ const state = {
   selectedCategory: 'All',
   searchTerm: '',
   openInNewTab: true,
+  confirmClose: true,
+  debugMode: false,
   hiddenCategories: new Set(['DEBUG'])
 };
 
@@ -303,7 +305,6 @@ function renderItems(items, container, itemType) {
 }
 
 function renderUgsGames() {
-  const searchInput = document.getElementById('ugs-search');
   const buttonsContainers = document.querySelectorAll('#sections-container .buttons-container');
 
   buttonsContainers.forEach(buttonsContainer => {
@@ -340,21 +341,20 @@ function renderUgsGames() {
     buttonsContainer.replaceChildren(...gameCards);
   });
 
-  if (searchInput && searchInput.dataset.bound !== 'true') {
-    searchInput.dataset.bound = 'true';
-    searchInput.addEventListener('input', () => {
-      const searchText = searchInput.value.trim().toLowerCase();
-      document.querySelectorAll('#sections-container .letter-section').forEach(section => {
-        const sectionCards = [...section.querySelectorAll('.ugs-game-card')];
-        const visibleCards = sectionCards.filter(card => {
-          const matches = card.querySelector('.ugs-game-name').textContent.toLowerCase().includes(searchText);
-          card.hidden = !matches;
-          return matches;
-        });
-        section.hidden = sectionCards.length > 0 && visibleCards.length === 0;
-      });
+  filterUgsGames();
+}
+
+function filterUgsGames() {
+  const searchText = state.searchTerm.trim().toLowerCase();
+  document.querySelectorAll('#sections-container .letter-section').forEach(section => {
+    const sectionCards = [...section.querySelectorAll('.ugs-game-card')];
+    const visibleCards = sectionCards.filter(card => {
+      const matches = card.querySelector('.ugs-game-name').textContent.toLowerCase().includes(searchText);
+      card.hidden = !matches;
+      return matches;
     });
-  }
+    section.hidden = sectionCards.length > 0 && visibleCards.length === 0;
+  });
 }
 
 function loadUgsGames() {
@@ -483,6 +483,8 @@ function getSettingsExport() {
   return {
     version: 1,
     openInNewTab: document.getElementById('open-in-new-tab')?.checked === true,
+    confirmClose: document.getElementById('confirm-close')?.checked === true,
+    debugMode: document.getElementById('debug-mode')?.checked === true,
     cl0ak: document.getElementById('cl0ak')?.checked === true,
     cl0akWebsite: document.getElementById('cloak-website')?.value || '',
     gameVersion: document.getElementById('game-version')?.value || 'latest',
@@ -496,6 +498,8 @@ function getSettingsExport() {
 function isValidSettingsExport(settings) {
   if (!settings || typeof settings !== 'object' || settings.version !== 1) return false;
   if (typeof settings.openInNewTab !== 'boolean' || typeof settings.cl0ak !== 'boolean' || typeof settings.cl0akWebsite !== 'string') return false;
+  if (settings.confirmClose !== undefined && typeof settings.confirmClose !== 'boolean') return false;
+  if (settings.debugMode !== undefined && typeof settings.debugMode !== 'boolean') return false;
   if (settings.gameVersion !== undefined && typeof settings.gameVersion !== 'string') return false;
   if (!settings.theme || typeof settings.theme !== 'object') return false;
 
@@ -535,6 +539,8 @@ function setupSettingsFileControls() {
       if (!isValidSettingsExport(settings)) throw new Error('Invalid settings file.');
 
       const openInNewTabInput = document.getElementById('open-in-new-tab');
+      const confirmCloseInput = document.getElementById('confirm-close');
+      const debugModeInput = document.getElementById('debug-mode');
       const cl0akInput = document.getElementById('cl0ak');
       const cloakWebsiteInput = document.getElementById('cloak-website');
       const gameVersionInput = document.getElementById('game-version');
@@ -543,6 +549,14 @@ function setupSettingsFileControls() {
 
       openInNewTabInput.checked = settings.openInNewTab;
       openInNewTabInput.dispatchEvent(new Event('change'));
+      if (typeof settings.confirmClose === 'boolean') {
+        confirmCloseInput.checked = settings.confirmClose;
+        confirmCloseInput.dispatchEvent(new Event('change'));
+      }
+      if (typeof settings.debugMode === 'boolean') {
+        debugModeInput.checked = settings.debugMode;
+        debugModeInput.dispatchEvent(new Event('change'));
+      }
       gameVersionInput.value = settings.gameVersion || 'latest';
       gameVersionInput.dispatchEvent(new Event('change'));
       THEME_SETTINGS.forEach(setting => {
@@ -623,6 +637,8 @@ function setupPageNavigation() {
   const ugsButton = document.getElementById('ugs-view-button');
   const appsButton = document.getElementById('apps-view-button');
   const settingsButton = document.getElementById('settings-view-button');
+  const searchControls = document.getElementById('search-controls');
+  const searchInput = document.getElementById('search');
   const gameControls = document.getElementById('game-controls');
   const gamesPage = document.getElementById('games-page');
   const ugsPage = document.getElementById('ugs-page');
@@ -630,23 +646,34 @@ function setupPageNavigation() {
   const settingsPage = document.getElementById('settings-page');
   const reloadGamesButton = document.getElementById('reload-games');
   const openInNewTabInput = document.getElementById('open-in-new-tab');
+  const confirmCloseInput = document.getElementById('confirm-close');
+  const debugModeInput = document.getElementById('debug-mode');
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
     openInNewTabInput.checked = localStorage.getItem('openInNewTab') === 'true';
+    const savedConfirmClose = localStorage.getItem('confirmClose');
+    confirmCloseInput.checked = savedConfirmClose === null || savedConfirmClose === 'true';
+    debugModeInput.checked = localStorage.getItem('debugMode') === 'true';
     cl0akInput.checked = localStorage.getItem('cl0ak') === 'true';
     savedCloakWebsite = localStorage.getItem('cl0akWebsite') || localStorage.getItem('customTabIcon') || '';
   } catch (error) {
     openInNewTabInput.checked = false;
+    confirmCloseInput.checked = true;
+    debugModeInput.checked = false;
     cl0akInput.checked = false;
   }
   state.openInNewTab = openInNewTabInput.checked;
+  state.confirmClose = confirmCloseInput.checked;
+  state.debugMode = debugModeInput.checked;
+  if (state.debugMode) state.hiddenCategories.delete('DEBUG');
+  else state.hiddenCategories.add('DEBUG');
   const savedWebsite = parseCloakWebsite(savedCloakWebsite);
   cloakWebsiteInput.value = savedWebsite ? savedWebsite.origin : '';
   setTabCloaking(cl0akInput.checked, cloakWebsiteInput.value);
@@ -664,6 +691,7 @@ function setupPageNavigation() {
     const isUgs = page === 'ugs';
     const isApps = page === 'apps';
     const isSettings = page === 'settings';
+    searchControls.hidden = !isGames && !isUgs;
     gameControls.hidden = !isGames;
     gamesPage.hidden = !isGames;
     ugsPage.hidden = !isUgs;
@@ -685,6 +713,11 @@ function setupPageNavigation() {
   appsButton.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
   reloadGamesButton?.addEventListener('click', () => loadGames());
+  searchInput.addEventListener('input', () => {
+    state.searchTerm = searchInput.value;
+    renderGames();
+    filterUgsGames();
+  });
   gameVersionInput.addEventListener('change', () => {
     const selectedVersion = gameVersionInput.value === 'latest'
       || gameVersionInput.value === 'main'
@@ -706,6 +739,26 @@ function setupPageNavigation() {
     renderGames();
     try {
       localStorage.setItem('openInNewTab', String(openInNewTabInput.checked));
+    } catch (error) {
+      console.warn('Unable to save settings:', error);
+    }
+  });
+  confirmCloseInput.addEventListener('change', () => {
+    state.confirmClose = confirmCloseInput.checked;
+    try {
+      localStorage.setItem('confirmClose', String(state.confirmClose));
+    } catch (error) {
+      console.warn('Unable to save settings:', error);
+    }
+  });
+  debugModeInput.addEventListener('change', () => {
+    state.debugMode = debugModeInput.checked;
+    if (state.debugMode) state.hiddenCategories.delete('DEBUG');
+    else state.hiddenCategories.add('DEBUG');
+    renderCategoryButtons(getCategoryButtons(state.games));
+    renderGames();
+    try {
+      localStorage.setItem('debugMode', String(state.debugMode));
     } catch (error) {
       console.warn('Unable to save settings:', error);
     }
@@ -755,19 +808,10 @@ function setupPageNavigation() {
 
 async function loadGames() {
   const container = document.getElementById('container');
-  const searchInput = document.getElementById('search');
 
   if (!container) return;
 
   container.innerHTML = '<p>Loading games...</p>';
-
-  if (searchInput && searchInput.dataset.bound !== 'true') {
-    searchInput.dataset.bound = 'true';
-    searchInput.addEventListener('input', event => {
-      state.searchTerm = event.target.value;
-      renderGames();
-    });
-  }
 
   try {
     const gamesBaseUrl = getGamesBaseUrl();
@@ -953,6 +997,11 @@ async function loadSplash() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('beforeunload', event => {
+    if (!state.confirmClose) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   setupPageNavigation();
   loadGameVersions().then(loadGames);
   loadApps();

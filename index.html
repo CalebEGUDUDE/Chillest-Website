@@ -16,6 +16,22 @@
         </header>
         <div class="site-layout">
             <aside class="sidebar">
+                <div id="search-controls" class="game-search-controls">
+                    <div class="input-wrapper">
+                        <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="10.8" cy="10.8" r="6.3" fill="none" stroke="currentColor" stroke-width="2.4"></circle>
+                            <path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2.4"></path>
+                        </svg>
+                        <input id="search" class="search-input" placeholder="search..." aria-label="Search games and UGS games">
+                    </div>
+                    <button id="reload-games" class="reload-games-button" type="button" aria-label="Reload games" title="Reload games">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 7v5h-5M4 17v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M5.6 9a7 7 0 0 1 11.5-2L20 12M4 12l2.9 5a7 7 0 0 0 11.5-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </button>
+                </div>
+                <br>
                 <nav class="page-nav" aria-label="Pages">
                     <button id="games-view-button" class="bar active" type="button" aria-pressed="true">Games</button>
                     <button id="ugs-view-button" class="bar" type="button" aria-pressed="false">UGS</button>
@@ -23,14 +39,6 @@
                     <button id="settings-view-button" class="bar" type="button" aria-pressed="false">Settings</button>
                 </nav>
                 <div id="game-controls">
-                    <div class="input-wrapper">
-                        <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="10.8" cy="10.8" r="6.3" fill="none" stroke="currentColor" stroke-width="2.4"></circle>
-                            <path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="2.4"></path>
-                        </svg>
-                        <input id="search" class="search-input" placeholder="search..." aria-label="Search games">
-                    </div>
-                    <button id="reload-games" class="bar" type="button">Reload</button>
                     <nav id="catagories" class="catagories" aria-label="Game categories"></nav>
                 </div>
             </aside>
@@ -41,9 +49,6 @@
                     <div class="container" id="container"></div>
                 </div>
                 <section id="ugs-page" hidden aria-label="UGS games">
-                    <div class="ugs-toolbar">
-                        <input id="ugs-search" type="search" placeholder="Search UGS games..." aria-label="Search UGS games">
-                    </div>
                     <div class="ugs-layout">
                         <nav id="sidebar" class="ugs-sidebar" aria-label="UGS game letters"></nav>
                         <div id="sections-container" class="ugs-sections"></div>
@@ -59,6 +64,14 @@
                     <label class="setting-option" for="open-in-new-tab">
                         <input id="open-in-new-tab" type="checkbox">
                         <span>Open in new tab</span>
+                    </label>
+                    <label class="setting-option" for="confirm-close">
+                        <input id="confirm-close" type="checkbox" checked>
+                        <span>Confirm before closing page</span>
+                    </label>
+                    <label class="setting-option" for="debug-mode">
+                        <input id="debug-mode" type="checkbox">
+                        <span>Debug mode</span>
                     </label>
                     <label class="setting-option" for="cl0ak">
                         <input id="cl0ak" type="checkbox">
