@@ -107,6 +107,11 @@
       cursor: not-allowed;
     }
 
+    .reload-versions-button {
+      padding: 8px 12px;
+      font-size: 1.1rem;
+    }
+
     .sync-status {
       display: flex;
       align-items: center;
@@ -157,6 +162,7 @@
       <select id="channelSelect" disabled>
         <option value="">Loading versions...</option>
       </select>
+      <button id="reloadVersionsBtn" class="reload-versions-button" type="button" aria-label="Reload available versions">Reload versions</button>
     </div>
 
     <button id="launchBtn" disabled>Unavailable</button>
@@ -173,10 +179,12 @@
     const syncStatus = document.getElementById('syncStatus');
     const syncText = document.getElementById('syncText');
     const channelSelect = document.getElementById('channelSelect');
+    const reloadVersionsBtn = document.getElementById('reloadVersionsBtn');
 
     let resolvedTag = null;
     let cdnRef = null;
     let cdnBaseUrl = '';
+    let syncRequestId = 0;
 
     function updateSyncState(state, message, canLaunch = false, btnText = 'Unavailable') {
       syncStatus.className = `sync-status ${state}`;
@@ -187,8 +195,10 @@
 
     async function syncTarget() {
       const selectedVersion = channelSelect.value;
+      const requestId = ++syncRequestId;
       resolvedTag = null;
       cdnRef = null;
+      cdnBaseUrl = '';
 
       updateSyncState('syncing', 'Syncing version...', false, 'Syncing...');
 
@@ -197,24 +207,23 @@
         return;
       }
 
-      if (selectedVersion === 'main') {
-        resolvedTag = 'main';
-        cdnRef = 'main';
-      } else {
-        try {
-          const commitRes = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(selectedVersion)}`, { cache: 'no-store' });
-          if (commitRes.ok) {
-            const commit = await commitRes.json();
-            if (commit && commit.sha) {
-              resolvedTag = selectedVersion;
-              cdnRef = commit.sha;
-            }
-          }
-        } catch (err) {
-          // Failed to resolve the selected version
-        }
+      try {
+        const commitRes = await fetch(`https://api.github.com/repos/${REPO}/commits/${encodeURIComponent(selectedVersion)}?t=${Date.now()}`, { cache: 'no-store' });
+        if (requestId !== syncRequestId) return;
+        if (!commitRes.ok) throw new Error('Could not resolve the selected version');
+        const commit = await commitRes.json();
+        if (requestId !== syncRequestId) return;
+        if (!commit || typeof commit.sha !== 'string') throw new Error('Selected version has no commit');
+
+        cdnRef = commit.sha;
+        resolvedTag = selectedVersion === 'main' ? 'main branch' : selectedVersion;
+      } catch (err) {
+        if (requestId !== syncRequestId) return;
+        updateSyncState('error', 'Version unavailable', false, 'Unavailable');
+        return;
       }
 
+      if (requestId !== syncRequestId) return;
       if (!resolvedTag || !cdnRef) {
         updateSyncState('error', 'Version unavailable', false, 'Unavailable');
         return;
@@ -224,86 +233,108 @@
 
       try {
         updateSyncState('syncing', 'Verifying files...', false, 'Syncing...');
-        const testRes = await fetch(`${cdnBaseUrl}index.html`);
+        const testRes = await fetch(`${cdnBaseUrl}index.html?t=${Date.now()}`, { cache: 'no-store' });
+        if (requestId !== syncRequestId) return;
         
         if (testRes.ok) {
           updateSyncState('ready', `Synced (${resolvedTag})`, true, 'Launch Site');
         } else {
-          updateSyncState('error', 'Files unreadable (Try @main?)', false, 'Unavailable');
+          updateSyncState('error', 'Files unavailable for this version', false, 'Unavailable');
         }
       } catch (err) {
+        if (requestId !== syncRequestId) return;
         updateSyncState('error', 'Sync failed', false, 'Unavailable');
       }
     }
 
-    async function loadVersions() {
-      try {
-        const [tags, releaseResponse] = await Promise.all([
-          loadAllTags(),
-          fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store' })
-        ]);
-        const release = releaseResponse.ok ? await releaseResponse.json() : null;
-        const latestTag = release && release.tag_name;
-        const versions = [...new Set([latestTag, ...tags.map(tag => tag.name)].filter(Boolean))];
+    async function loadVersions(preserveSelection = false) {
+      const previousSelection = preserveSelection ? channelSelect.value : '';
+      reloadVersionsBtn.disabled = true;
 
-        if (versions.length === 0) throw new Error('No versions found');
+      try {
+        const releases = await loadAllReleases();
+        if (releases.length === 0) throw new Error('No releases found');
+
+        const latestRelease = releases.find(release => !release.prerelease) || releases[0];
+        const orderedReleases = [
+          latestRelease,
+          ...releases.filter(release => release.tag_name !== latestRelease.tag_name)
+        ];
 
         channelSelect.replaceChildren();
         const versionGroup = document.createElement('optgroup');
-        versionGroup.label = 'Versions';
-        for (const version of versions) {
+        versionGroup.label = 'Releases';
+        for (const release of orderedReleases) {
           const option = document.createElement('option');
-          option.value = version;
-          option.textContent = version === latestTag ? `${version} (Latest Release)` : version;
+          option.value = release.tag_name;
+          const releaseName = release.name?.trim() || release.tag_name;
+          option.textContent = release.tag_name === latestRelease.tag_name
+            ? `${releaseName} (Latest Release)`
+            : releaseName;
           versionGroup.append(option);
         }
         channelSelect.append(versionGroup);
 
         const mainOption = document.createElement('option');
         mainOption.value = 'main';
-        mainOption.textContent = '@main Branch (Not Recommended)';
+        mainOption.textContent = 'main branch (latest changes)';
         channelSelect.append(mainOption);
 
-        channelSelect.value = latestTag && versions.includes(latestTag) ? latestTag : versions[0];
+        channelSelect.value = orderedReleases.some(release => release.tag_name === previousSelection)
+          || previousSelection === 'main'
+          ? previousSelection
+          : latestRelease.tag_name;
         channelSelect.disabled = false;
         await syncTarget();
       } catch (err) {
         channelSelect.replaceChildren();
+        const versionGroup = document.createElement('optgroup');
+        versionGroup.label = 'Releases unavailable';
         const unavailableOption = document.createElement('option');
         unavailableOption.value = '';
-        unavailableOption.textContent = 'Versions unavailable';
-        channelSelect.append(unavailableOption);
+        unavailableOption.textContent = 'Could not load releases';
+        versionGroup.append(unavailableOption);
+        channelSelect.append(versionGroup);
 
         const mainOption = document.createElement('option');
         mainOption.value = 'main';
-        mainOption.textContent = '@main Branch (Not Recommended)';
+        mainOption.textContent = 'main branch (latest changes)';
         channelSelect.append(mainOption);
+
+        channelSelect.value = '';
         channelSelect.disabled = false;
-        updateSyncState('error', 'Could not load versions', false, 'Unavailable');
+        updateSyncState('error', 'Could not load releases', false, 'Unavailable');
+      } finally {
+        reloadVersionsBtn.disabled = false;
       }
     }
 
-    async function loadAllTags() {
-      const tags = [];
+    async function loadAllReleases() {
+      const releases = [];
       let page = 1;
-      let pageTags;
+      let pageReleases;
 
       do {
-        const response = await fetch(`https://api.github.com/repos/${REPO}/tags?per_page=100&page=${page}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Could not load tags');
-        pageTags = await response.json();
-        tags.push(...pageTags);
+        const response = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100&page=${page}&t=${Date.now()}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Could not load releases');
+        pageReleases = await response.json();
+        releases.push(...pageReleases);
         page += 1;
-      } while (pageTags.length === 100);
+      } while (pageReleases.length === 100);
 
-      return tags;
+      return releases
+        .filter(release => typeof release.tag_name === 'string' && release.tag_name.trim())
+        .sort((first, second) => Date.parse(second.published_at || second.created_at) - Date.parse(first.published_at || first.created_at));
     }
 
     channelSelect.addEventListener('change', syncTarget);
+    reloadVersionsBtn.addEventListener('click', () => loadVersions(true));
     loadVersions();
 
     launchBtn.addEventListener('click', async () => {
       if (!resolvedTag || launchBtn.disabled) return;
+      const launchVersion = resolvedTag;
+      const launchBaseUrl = cdnBaseUrl;
 
       const win = window.open('about:blank', '_blank');
 
@@ -314,12 +345,12 @@
       }
 
       try {
-        const response = await fetch(`${cdnBaseUrl}index.html`);
+        const response = await fetch(`${launchBaseUrl}index.html?t=${Date.now()}`, { cache: 'no-store' });
         if (!response.ok) throw new Error('File download failed');
 
         let htmlContent = await response.text();
 
-        const baseTag = `<base href="${cdnBaseUrl}">`;
+        const baseTag = `<base href="${launchBaseUrl}">`;
         if (htmlContent.includes('<head>')) {
           htmlContent = htmlContent.replace('<head>', `<head>${baseTag}`);
         } else {
@@ -330,9 +361,13 @@
         win.document.write(htmlContent);
         win.document.close();
         
-        updateSyncState('ready', `Synced (${resolvedTag})`, true, 'Launch Site');
+        if (launchVersion === resolvedTag) {
+          updateSyncState('ready', `Synced (${launchVersion})`, true, 'Launch Site');
+        }
       } catch (err) {
-        updateSyncState('error', 'Launch failed', false, 'Unavailable');
+        if (launchVersion === resolvedTag) {
+          updateSyncState('error', 'Launch failed', false, 'Unavailable');
+        }
       }
     });
 
