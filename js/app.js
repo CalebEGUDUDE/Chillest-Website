@@ -294,6 +294,7 @@ function renderItems(items, container, itemType) {
       </div>
     `;
 
+    gameCard.querySelector('.game-name').title = item.name;
     const downloadControl = gameCard.querySelector('.download');
     if (downloadControl) {
       downloadControl.addEventListener('click', () => downloadGame(item.url, item.fileName));
@@ -485,6 +486,7 @@ function getSettingsExport() {
     openInNewTab: document.getElementById('open-in-new-tab')?.checked === true,
     confirmClose: document.getElementById('confirm-close')?.checked === true,
     debugMode: document.getElementById('debug-mode')?.checked === true,
+    bannerMode: document.getElementById('banner-mode')?.checked === true,
     cl0ak: document.getElementById('cl0ak')?.checked === true,
     cl0akWebsite: document.getElementById('cloak-website')?.value || '',
     gameVersion: document.getElementById('game-version')?.value || 'latest',
@@ -500,6 +502,7 @@ function isValidSettingsExport(settings) {
   if (typeof settings.openInNewTab !== 'boolean' || typeof settings.cl0ak !== 'boolean' || typeof settings.cl0akWebsite !== 'string') return false;
   if (settings.confirmClose !== undefined && typeof settings.confirmClose !== 'boolean') return false;
   if (settings.debugMode !== undefined && typeof settings.debugMode !== 'boolean') return false;
+  if (settings.bannerMode !== undefined && typeof settings.bannerMode !== 'boolean') return false;
   if (settings.gameVersion !== undefined && typeof settings.gameVersion !== 'string') return false;
   if (!settings.theme || typeof settings.theme !== 'object') return false;
 
@@ -541,6 +544,7 @@ function setupSettingsFileControls() {
       const openInNewTabInput = document.getElementById('open-in-new-tab');
       const confirmCloseInput = document.getElementById('confirm-close');
       const debugModeInput = document.getElementById('debug-mode');
+      const bannerModeInput = document.getElementById('banner-mode');
       const cl0akInput = document.getElementById('cl0ak');
       const cloakWebsiteInput = document.getElementById('cloak-website');
       const gameVersionInput = document.getElementById('game-version');
@@ -556,6 +560,10 @@ function setupSettingsFileControls() {
       if (typeof settings.debugMode === 'boolean') {
         debugModeInput.checked = settings.debugMode;
         debugModeInput.dispatchEvent(new Event('change'));
+      }
+      if (typeof settings.bannerMode === 'boolean') {
+        bannerModeInput.checked = settings.bannerMode;
+        bannerModeInput.dispatchEvent(new Event('change'));
       }
       gameVersionInput.value = settings.gameVersion || 'latest';
       gameVersionInput.dispatchEvent(new Event('change'));
@@ -648,12 +656,13 @@ function setupPageNavigation() {
   const openInNewTabInput = document.getElementById('open-in-new-tab');
   const confirmCloseInput = document.getElementById('confirm-close');
   const debugModeInput = document.getElementById('debug-mode');
+  const bannerModeInput = document.getElementById('banner-mode');
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -661,14 +670,17 @@ function setupPageNavigation() {
     const savedConfirmClose = localStorage.getItem('confirmClose');
     confirmCloseInput.checked = savedConfirmClose === null || savedConfirmClose === 'true';
     debugModeInput.checked = localStorage.getItem('debugMode') === 'true';
+    bannerModeInput.checked = localStorage.getItem('bannerMode') === 'true';
     cl0akInput.checked = localStorage.getItem('cl0ak') === 'true';
     savedCloakWebsite = localStorage.getItem('cl0akWebsite') || localStorage.getItem('customTabIcon') || '';
   } catch (error) {
     openInNewTabInput.checked = false;
     confirmCloseInput.checked = true;
     debugModeInput.checked = false;
+    bannerModeInput.checked = false;
     cl0akInput.checked = false;
   }
+  document.body.classList.toggle('banner-mode', bannerModeInput.checked);
   state.openInNewTab = openInNewTabInput.checked;
   state.confirmClose = confirmCloseInput.checked;
   state.debugMode = debugModeInput.checked;
@@ -759,6 +771,15 @@ function setupPageNavigation() {
     renderGames();
     try {
       localStorage.setItem('debugMode', String(state.debugMode));
+    } catch (error) {
+      console.warn('Unable to save settings:', error);
+    }
+  });
+  bannerModeInput.addEventListener('change', () => {
+    document.body.classList.toggle('banner-mode', bannerModeInput.checked);
+    showRandomSplash();
+    try {
+      localStorage.setItem('bannerMode', String(bannerModeInput.checked));
     } catch (error) {
       console.warn('Unable to save settings:', error);
     }
@@ -937,18 +958,56 @@ function getSplashPool(payload) {
 
 function showRandomSplash() {
   const splashElement = document.getElementById('splash');
-  if (!splashElement || splashPool.length === 0) return;
+  const splashTrack = document.getElementById('splash-track');
+  if (!splashElement || !splashTrack || splashPool.length === 0) return;
 
-  const otherSplashes = splashPool.filter(splash => splash !== splashElement.textContent);
+  const currentSplash = splashTrack.querySelector('.splash-message')?.textContent;
+  const otherSplashes = splashPool.filter(splash => splash !== currentSplash);
   const choices = otherSplashes.length > 0 ? otherSplashes : splashPool;
-  splashElement.textContent = choices[Math.floor(Math.random() * choices.length)];
+  const firstSplash = choices[Math.floor(Math.random() * choices.length)];
+  const messages = [firstSplash];
+  const remainingSplashes = splashPool.filter(splash => splash !== firstSplash);
+  const messageCount = document.body.classList.contains('banner-mode') ? Math.min(3, splashPool.length) : 1;
+
+  while (messages.length < messageCount && remainingSplashes.length > 0) {
+    const nextIndex = Math.floor(Math.random() * remainingSplashes.length);
+    messages.push(remainingSplashes.splice(nextIndex, 1)[0]);
+  }
+
+  renderSplashMessages(messages);
   splashElement.setAttribute('aria-label', 'Show another splash');
+}
+
+function renderSplashMessages(messages) {
+  const splashTrack = document.getElementById('splash-track');
+  if (!splashTrack) return;
+
+  const isBannerMode = document.body.classList.contains('banner-mode');
+  const sequences = isBannerMode ? 2 : 1;
+  const minimumSequenceWidth = splashTrack.parentElement?.clientWidth || 0;
+  splashTrack.replaceChildren();
+
+  for (let sequenceIndex = 0; sequenceIndex < sequences; sequenceIndex += 1) {
+    const sequence = document.createElement('span');
+    sequence.className = 'splash-sequence';
+    sequence.style.minWidth = `${minimumSequenceWidth}px`;
+    sequence.setAttribute('aria-hidden', sequenceIndex === 1 ? 'true' : 'false');
+
+    messages.forEach(message => {
+      const splashMessage = document.createElement('span');
+      splashMessage.className = 'splash-message';
+      splashMessage.textContent = message;
+      sequence.appendChild(splashMessage);
+    });
+
+    splashTrack.appendChild(sequence);
+  }
 }
 
 function showFlashbang() {
   const splashElement = document.getElementById('splash');
   if (splashElement) {
-    splashElement.textContent = 'flashbang!!!!! 🧨';
+    renderSplashMessages(['flashbang!!!!! 🧨']);
     splashElement.setAttribute('aria-label', 'flashbang!!!!!');
   }
 
@@ -972,9 +1031,19 @@ function rerollSplash() {
 
 async function loadSplash() {
   const splashElement = document.getElementById('splash');
-  if (!splashElement) return;
+  const splashTrack = document.getElementById('splash-track');
+  if (!splashElement || !splashTrack) return;
 
   splashElement.addEventListener('click', rerollSplash);
+  window.addEventListener('resize', () => {
+    const minimumSequenceWidth = `${splashElement.clientWidth}px`;
+    splashTrack.querySelectorAll('.splash-sequence').forEach(sequence => {
+      sequence.style.minWidth = minimumSequenceWidth;
+    });
+  });
+  splashTrack.addEventListener('animationiteration', () => {
+    if (document.body.classList.contains('banner-mode')) showRandomSplash();
+  });
 
   try {
     const response = await fetch(SPLASHES_URL, { cache: 'no-store' });

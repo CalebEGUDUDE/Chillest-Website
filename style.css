@@ -36,14 +36,53 @@ h1 {
     font-weight: 400;
 }
 
+.splash-banner {
+    display: flex;
+    width: min(100%, 600px);
+    overflow: hidden;
+    justify-content: center;
+}
+
 #splash {
+    display: block;
+    width: 100%;
     margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--yellow);
     font-size: 1.25rem;
+    text-align: center;
     cursor: pointer;
+}
+
+.splash-track {
+    display: block;
+}
+
+body.banner-mode .splash-track {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: splash-banner-scroll 36s linear infinite;
+}
+
+.splash-sequence {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 2.5rem;
+    padding-right: 2.5rem;
+}
+
+.splash-message {
+    flex: 0 0 auto;
+}
+
+@keyframes splash-banner-scroll {
+    to {
+        transform: translateX(-50%);
+    }
 }
 
 #splash:hover {
@@ -322,11 +361,16 @@ h1 {
     right: 0;
     bottom: calc(100% + 8px);
     left: 0;
-    display: block;
+    display: -webkit-box;
+    max-height: 2.5em;
     margin: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
     color: var(--orange);
     font-size: 1.25rem;
     text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .game-card img {

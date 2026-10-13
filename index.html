@@ -12,7 +12,11 @@
     <body>
         <header class="site-header">
             <h1>Chillest Website</h1>
-            <button id="splash" type="button" aria-label="Show another splash"></button>
+            <div class="splash-banner">
+                <button id="splash" type="button" aria-label="Show another splash">
+                    <span id="splash-track" class="splash-track"></span>
+                </button>
+            </div>
         </header>
         <div class="site-layout">
             <aside class="sidebar">
@@ -73,6 +77,10 @@
                     <label class="setting-option" for="debug-mode">
                         <input id="debug-mode" type="checkbox">
                         <span>Debug mode</span>
+                    </label>
+                    <label class="setting-option" for="banner-mode">
+                        <input id="banner-mode" type="checkbox">
+                        <span>Banner mode</span>
                     </label>
                     <label class="setting-option" for="cl0ak">
                         <input id="cl0ak" type="checkbox">
