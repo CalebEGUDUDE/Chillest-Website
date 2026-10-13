@@ -97,7 +97,7 @@ async function loadGameIntoDocument(gameDocument, url) {
   }
 }
 
-function createGamePlayer(url) {
+function createGamePlayer(url, game) {
   const playerDocument = document;
   const player = playerDocument.createElement('main');
   player.className = 'game-player';
@@ -108,6 +108,16 @@ function createGamePlayer(url) {
   frame.className = 'game-player-frame';
   frame.title = 'Game';
   frame.allow = 'fullscreen';
+
+  const attribution = [];
+  if (game.from) attribution.push(`From: ${game.from}`);
+  if (game.suggest) attribution.push(`Suggested by: ${game.suggest}`);
+  if (attribution.length > 0) {
+    const details = playerDocument.createElement('span');
+    details.className = 'game-player-attribution';
+    details.textContent = attribution.join(' · ');
+    toolbar.appendChild(details);
+  }
 
   const addAction = (label, onClick) => {
     const button = playerDocument.createElement('button');
@@ -143,13 +153,13 @@ function openGameInNewTab(url) {
   loadGameIntoDocument(gameWindow.document, url);
 }
 
-function playGame(url) {
+function playGame(url, game = {}) {
   if (state.openInNewTab) {
     openGameInNewTab(url);
     return;
   }
 
-  createGamePlayer(url);
+  createGamePlayer(url, game);
 }
 
 const REPO_OWNER = 'CalebEGUDUDE';
@@ -248,6 +258,34 @@ function renderGames() {
   renderItems(state.games, document.getElementById('container'), 'games');
 }
 
+function renderCredits() {
+  const creditsContainer = document.getElementById('game-credits');
+  if (!creditsContainer) return;
+
+  const creditedGames = state.games.filter(game => game.from || game.suggest);
+  creditsContainer.replaceChildren();
+
+  if (creditedGames.length === 0) {
+    const emptyMessage = document.createElement('li');
+    emptyMessage.textContent = 'No game credits available.';
+    creditsContainer.appendChild(emptyMessage);
+    return;
+  }
+
+  creditedGames.forEach(game => {
+    const entry = document.createElement('li');
+    const name = document.createElement('strong');
+    name.textContent = game.name;
+    const details = document.createElement('span');
+    const attribution = [];
+    if (game.from) attribution.push(`From: ${game.from}`);
+    if (game.suggest) attribution.push(`Suggested by: ${game.suggest}`);
+    details.textContent = attribution.join(' · ');
+    entry.append(name, details);
+    creditsContainer.appendChild(entry);
+  });
+}
+
 function renderApps() {
   renderItems(state.apps, document.getElementById('apps-container'), 'apps');
 }
@@ -299,7 +337,7 @@ function renderItems(items, container, itemType) {
     if (downloadControl) {
       downloadControl.addEventListener('click', () => downloadGame(item.url, item.fileName));
     }
-    gameCard.querySelector('.play').addEventListener('click', () => playGame(item.url));
+    gameCard.querySelector('.play').addEventListener('click', () => playGame(item.url, item));
 
     container.appendChild(gameCard);
   });
@@ -645,6 +683,7 @@ function setupPageNavigation() {
   const ugsButton = document.getElementById('ugs-view-button');
   const appsButton = document.getElementById('apps-view-button');
   const settingsButton = document.getElementById('settings-view-button');
+  const creditsButton = document.getElementById('credits-view-button');
   const searchControls = document.getElementById('search-controls');
   const searchInput = document.getElementById('search');
   const gameControls = document.getElementById('game-controls');
@@ -652,6 +691,7 @@ function setupPageNavigation() {
   const ugsPage = document.getElementById('ugs-page');
   const appsPage = document.getElementById('apps-page');
   const settingsPage = document.getElementById('settings-page');
+  const creditsPage = document.getElementById('credits-page');
   const reloadGamesButton = document.getElementById('reload-games');
   const openInNewTabInput = document.getElementById('open-in-new-tab');
   const confirmCloseInput = document.getElementById('confirm-close');
@@ -662,7 +702,7 @@ function setupPageNavigation() {
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !creditsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !creditsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -703,27 +743,32 @@ function setupPageNavigation() {
     const isUgs = page === 'ugs';
     const isApps = page === 'apps';
     const isSettings = page === 'settings';
+    const isCredits = page === 'credits';
     searchControls.hidden = !isGames && !isUgs;
     gameControls.hidden = !isGames;
     gamesPage.hidden = !isGames;
     ugsPage.hidden = !isUgs;
     appsPage.hidden = !isApps;
     settingsPage.hidden = !isSettings;
+    creditsPage.hidden = !isCredits;
     if (isUgs) loadUgsGames();
     gamesButton.classList.toggle('active', isGames);
     ugsButton.classList.toggle('active', isUgs);
     appsButton.classList.toggle('active', isApps);
     settingsButton.classList.toggle('active', isSettings);
+    creditsButton.classList.toggle('active', isCredits);
     gamesButton.setAttribute('aria-pressed', String(isGames));
     ugsButton.setAttribute('aria-pressed', String(isUgs));
     appsButton.setAttribute('aria-pressed', String(isApps));
     settingsButton.setAttribute('aria-pressed', String(isSettings));
+    creditsButton.setAttribute('aria-pressed', String(isCredits));
   };
 
   gamesButton.addEventListener('click', () => showPage('games'));
   ugsButton.addEventListener('click', () => showPage('ugs'));
   appsButton.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
+  creditsButton.addEventListener('click', () => showPage('credits'));
   reloadGamesButton?.addEventListener('click', () => loadGames());
   searchInput.addEventListener('input', () => {
     state.searchTerm = searchInput.value;
@@ -842,6 +887,9 @@ async function loadGames() {
     const data = await response.json();
 
     if (!Array.isArray(data) || data.length === 0) {
+      state.games = [];
+      renderCategoryButtons([]);
+      renderCredits();
       container.innerHTML = '<p>No games found in games/games.json</p>';
       return;
     }
@@ -859,12 +907,15 @@ async function loadGames() {
         category,
         fileName,
         url: filePath ? `${gamesBaseUrl}/${filePath}` : null,
-        icon: iconPath
+        icon: iconPath,
+        from: typeof item.from === 'string' ? item.from.trim() : '',
+        suggest: typeof item.suggest === 'string' ? item.suggest.trim() : ''
       };
     });
 
     renderCategoryButtons(getCategoryButtons(state.games));
     renderGames();
+    renderCredits();
   } catch (error) {
     console.error('Failed to load games:', error);
     container.innerHTML = `<p style="color: red;">Error loading games: ${error.message}</p>`;
