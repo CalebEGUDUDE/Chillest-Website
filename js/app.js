@@ -552,6 +552,104 @@ function setSettingsFileStatus(message) {
   if (status) status.textContent = message;
 }
 
+function getSaveDataExport() {
+  const storage = {};
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key !== null) storage[key] = localStorage.getItem(key);
+  }
+
+  return { version: 1, storage };
+}
+
+function isValidSaveDataExport(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.version !== 1) return false;
+  if (!data.storage || typeof data.storage !== 'object' || Array.isArray(data.storage)) return false;
+
+  return Object.values(data.storage).every(value => typeof value === 'string');
+}
+
+function setSaveDataStatus(message) {
+  const status = document.getElementById('save-data-status');
+  if (status) status.textContent = message;
+}
+
+function replaceLocalStorage(storage) {
+  const previousStorage = getSaveDataExport().storage;
+  try {
+    localStorage.clear();
+    Object.entries(storage).forEach(([key, value]) => localStorage.setItem(key, value));
+  } catch (error) {
+    try {
+      localStorage.clear();
+      Object.entries(previousStorage).forEach(([key, value]) => localStorage.setItem(key, value));
+    } catch (restoreError) {
+      console.error('Unable to restore local storage after a failed update:', restoreError);
+    }
+    throw error;
+  }
+}
+
+function setupSaveDataControls() {
+  const exportButton = document.getElementById('export-save-data');
+  const importButton = document.getElementById('import-save-data');
+  const wipeButton = document.getElementById('wipe-save-data');
+  const fileInput = document.getElementById('save-data-file');
+  if (!exportButton || !importButton || !wipeButton || !fileInput) return;
+
+  exportButton.addEventListener('click', () => {
+    try {
+      const file = new Blob([JSON.stringify(getSaveDataExport(), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'chillest-save-data.json';
+      link.click();
+      URL.revokeObjectURL(url);
+      setSaveDataStatus('Save data exported.');
+    } catch (error) {
+      setSaveDataStatus(`Could not export save data: ${error.message}`);
+    }
+  });
+
+  importButton.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
+    if (!file) return;
+
+    try {
+      const data = JSON.parse(await file.text());
+      if (!isValidSaveDataExport(data)) throw new Error('Invalid save data file.');
+      if (!window.confirm('Importing this backup will replace all saved data for this site. Continue?')) {
+        setSaveDataStatus('Save data import cancelled.');
+        return;
+      }
+
+      replaceLocalStorage(data.storage);
+      setSaveDataStatus('Save data imported. Reloading…');
+      window.location.reload();
+    } catch (error) {
+      setSaveDataStatus(`Could not import save data: ${error.message}`);
+    }
+  });
+
+  wipeButton.addEventListener('click', () => {
+    if (!window.confirm('This will permanently delete all saved data for this site. This cannot be undone. Continue?')) {
+      setSaveDataStatus('Wipe cancelled. Your saves are unchanged.');
+      return;
+    }
+
+    try {
+      localStorage.clear();
+      setSaveDataStatus('All saves wiped. Reloading…');
+      window.location.reload();
+    } catch (error) {
+      setSaveDataStatus(`Could not wipe saves: ${error.message}`);
+    }
+  });
+}
+
 function setupSettingsFileControls() {
   const exportButton = document.getElementById('export-settings');
   const importButton = document.getElementById('import-settings');
@@ -679,6 +777,7 @@ function setupThemeSettings() {
 function setupPageNavigation() {
   setupThemeSettings();
   setupSettingsFileControls();
+  setupSaveDataControls();
   const gamesButton = document.getElementById('games-view-button');
   const ugsButton = document.getElementById('ugs-view-button');
   const appsButton = document.getElementById('apps-view-button');

@@ -296,6 +296,21 @@ body.banner-mode .splash-track {
     color: var(--yellow);
 }
 
+.save-data-warning {
+    margin: 10px 0 0;
+}
+
+.settings-file-actions .danger-action {
+    border-color: #ff6666;
+    color: #ff6666;
+}
+
+.settings-file-actions .danger-action:hover,
+.settings-file-actions .danger-action:focus-visible {
+    background: #ff6666;
+    color: var(--background);
+}
+
 .game-player {
     position: fixed;
     inset: 0;

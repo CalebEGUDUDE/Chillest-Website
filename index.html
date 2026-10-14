@@ -118,6 +118,15 @@
                         <input id="settings-file" type="file" accept="application/json,.json" hidden>
                     </div>
                     <p id="settings-file-status" class="settings-file-status" role="status" aria-live="polite"></p>
+                    <h3 class="settings-subtitle">Save data</h3>
+                    <p class="save-data-warning">Importing a backup replaces all saved data for this site.</p>
+                    <div class="settings-file-actions">
+                        <button id="export-save-data" type="button">Export save data</button>
+                        <button id="import-save-data" type="button">Import save data</button>
+                        <button id="wipe-save-data" class="danger-action" type="button">Wipe saves</button>
+                        <input id="save-data-file" type="file" accept="application/json,.json" hidden>
+                    </div>
+                    <p id="save-data-status" class="settings-file-status" role="status" aria-live="polite"></p>
                 </section>
                 <section id="credits-page" aria-labelledby="credits-title" hidden>
                     <h2 id="credits-title">Credits</h2>
