@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Loading Chillest Website...</title>
+</head>
+<body>
+	<p id="status">Downloading the latest site files from GitHub...</p>
+	<p id="fallback" hidden>Could not load the site. Check your connection or <a href="https://github.com/CalebEGUDUDE/Chillest-Website">open the project on GitHub</a>.</p>
+
+	<script>
+		const repo = 'CalebEGUDUDE/Chillest-Website';
+
+		async function launchSite() {
+			try {
+				const commitResponse = await fetch(`https://api.github.com/repos/${repo}/commits/main`, { cache: 'no-store' });
+				if (!commitResponse.ok) throw new Error(`Could not find the latest commit (${commitResponse.status})`);
+				const commit = await commitResponse.json();
+				if (typeof commit.sha !== 'string' || !/^[a-f0-9]{40}$/i.test(commit.sha)) {
+					throw new Error('GitHub returned an invalid commit');
+				}
+
+				const repoBaseUrl = `https://cdn.jsdelivr.net/gh/${repo}@${commit.sha}/`;
+				const response = await fetch(`${repoBaseUrl}index.html`, { cache: 'no-store' });
+				if (!response.ok) throw new Error(`Site download failed (${response.status})`);
+
+				let html = await response.text();
+				if (!/<html\b/i.test(html)) throw new Error('GitHub returned invalid HTML');
+
+				const baseTag = `<base href="${repoBaseUrl}">`;
+				html = /<head\b[^>]*>/i.test(html)
+					? html.replace(/<head\b[^>]*>/i, match => `${match}${baseTag}`)
+					: `${baseTag}${html}`;
+
+				document.open();
+				document.write(html);
+				document.close();
+			} catch (error) {
+				console.error('Unable to launch Chillest Website:', error);
+				document.getElementById('status').textContent = 'Could not download the site files from GitHub.';
+				document.getElementById('fallback').hidden = false;
+			}
+		}
+
+		launchSite();
+	</script>
+</body>
+</html>
