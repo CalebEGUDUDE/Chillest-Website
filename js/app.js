@@ -391,12 +391,21 @@ function renderUgsGames() {
   filterUgsGames();
 }
 
+function getUgsSearchWords(value) {
+  return value
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Za-z])(\d)|(\d)([A-Za-z])/g, '$1$3 $2$4')
+    .toLowerCase()
+    .match(/[a-z0-9]+/g) || [];
+}
+
 function filterUgsGames() {
-  const searchText = state.searchTerm.trim().toLowerCase();
+  const searchWords = getUgsSearchWords(state.searchTerm);
   document.querySelectorAll('#sections-container .letter-section').forEach(section => {
     const sectionCards = [...section.querySelectorAll('.ugs-game-card')];
     const visibleCards = sectionCards.filter(card => {
-      const matches = card.querySelector('.ugs-game-name').textContent.toLowerCase().includes(searchText);
+      const gameWords = getUgsSearchWords(card.querySelector('.ugs-game-name').textContent);
+      const matches = searchWords.every(searchWord => gameWords.some(gameWord => gameWord.startsWith(searchWord)));
       card.hidden = !matches;
       return matches;
     });
@@ -809,7 +818,7 @@ function setupPageNavigation() {
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !ugsButton || !appsButton || !settingsButton || !creditsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !creditsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !settingsButton || !creditsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !creditsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -861,19 +870,19 @@ function setupPageNavigation() {
     if (isUgs) loadUgsGames();
     gamesButton.classList.toggle('active', isGames);
     ugsButton.classList.toggle('active', isUgs);
-    appsButton.classList.toggle('active', isApps);
+    appsButton?.classList.toggle('active', isApps);
     settingsButton.classList.toggle('active', isSettings);
     creditsButton.classList.toggle('active', isCredits);
     gamesButton.setAttribute('aria-pressed', String(isGames));
     ugsButton.setAttribute('aria-pressed', String(isUgs));
-    appsButton.setAttribute('aria-pressed', String(isApps));
+    appsButton?.setAttribute('aria-pressed', String(isApps));
     settingsButton.setAttribute('aria-pressed', String(isSettings));
     creditsButton.setAttribute('aria-pressed', String(isCredits));
   };
 
   gamesButton.addEventListener('click', () => showPage('games'));
   ugsButton.addEventListener('click', () => showPage('ugs'));
-  appsButton.addEventListener('click', () => showPage('apps'));
+  appsButton?.addEventListener('click', () => showPage('apps'));
   settingsButton.addEventListener('click', () => showPage('settings'));
   creditsButton.addEventListener('click', () => showPage('credits'));
   reloadGamesButton?.addEventListener('click', () => loadGames());
