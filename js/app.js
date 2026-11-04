@@ -302,7 +302,15 @@ function renderItems(items, container, itemType) {
     return !isHidden && matchesCategory && matchesSearch;
   });
   if (itemType === 'games') {
-    filteredItems.sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: 'base', numeric: true }));
+    filteredItems.sort((first, second) => {
+      if (state.selectedCategory === 'All') {
+        const firstIsPinned = first.category === 'PINNED';
+        const secondIsPinned = second.category === 'PINNED';
+        if (firstIsPinned !== secondIsPinned) return firstIsPinned ? -1 : 1;
+      }
+
+      return first.name.localeCompare(second.name, undefined, { sensitivity: 'base', numeric: true });
+    });
   }
 
   if (filteredItems.length === 0) {
