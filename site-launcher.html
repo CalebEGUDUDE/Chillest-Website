@@ -21,7 +21,7 @@
 					throw new Error('GitHub returned an invalid commit');
 				}
 
-				const repoBaseUrl = `https://cdn.jsdelivr.net/gh/${repo}@${commit.sha}/`;
+				const repoBaseUrl = `https://gcore.jsdelivr.net/gh/${repo}@${commit.sha}/`;
 				const response = await fetch(`${repoBaseUrl}index.html`, { cache: 'no-store' });
 				if (!response.ok) throw new Error(`Site download failed (${response.status})`);
 

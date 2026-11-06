@@ -167,7 +167,7 @@ const REPO_NAME = 'Chillest-Website-Games';
 const GAMES_FALLBACK_REF = 'main';
 const GAMES_TAGS_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/tags?per_page=100`;
 const APPS_BASE_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main`;
-const UGS_FILES_BASE_URL = 'https://cdn.jsdelivr.net/gh/bubbls/ugs-singlefile@main/UGS-Files';
+const UGS_FILES_BASE_URL = 'https://gcore.jsdelivr.net/gh/bubbls/ugs-singlefile@main/UGS-Files';
 
 const state = {
   games: [],
@@ -418,7 +418,7 @@ function loadUgsGames() {
 
   const sections = document.getElementById('sections-container');
   const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/gh/bubbls/ugs-singlefile@main/games.js';
+  script.src = 'https://gcore.jsdelivr.net/gh/bubbls/ugs-singlefile@main/games.js';
   script.onload = () => {
     renderUgsGames();
     ugsGamesLoaded = true;
