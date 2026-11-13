@@ -180,7 +180,8 @@ const state = {
   openInNewTab: true,
   confirmClose: true,
   debugMode: false,
-  hiddenCategories: new Set(['DEBUG'])
+  showSlop: false,
+  hiddenCategories: new Set(['DEBUG', 'Slop'])
 };
 
 let ugsGamesLoaded = false;
@@ -541,6 +542,7 @@ function getSettingsExport() {
     openInNewTab: document.getElementById('open-in-new-tab')?.checked === true,
     confirmClose: document.getElementById('confirm-close')?.checked === true,
     debugMode: document.getElementById('debug-mode')?.checked === true,
+    showSlop: document.getElementById('show-slop')?.checked === true,
     bannerMode: document.getElementById('banner-mode')?.checked === true,
     cl0ak: document.getElementById('cl0ak')?.checked === true,
     cl0akWebsite: document.getElementById('cloak-website')?.value || '',
@@ -557,6 +559,7 @@ function isValidSettingsExport(settings) {
   if (typeof settings.openInNewTab !== 'boolean' || typeof settings.cl0ak !== 'boolean' || typeof settings.cl0akWebsite !== 'string') return false;
   if (settings.confirmClose !== undefined && typeof settings.confirmClose !== 'boolean') return false;
   if (settings.debugMode !== undefined && typeof settings.debugMode !== 'boolean') return false;
+  if (settings.showSlop !== undefined && typeof settings.showSlop !== 'boolean') return false;
   if (settings.bannerMode !== undefined && typeof settings.bannerMode !== 'boolean') return false;
   if (settings.gameVersion !== undefined && typeof settings.gameVersion !== 'string') return false;
   if (!settings.theme || typeof settings.theme !== 'object') return false;
@@ -697,6 +700,7 @@ function setupSettingsFileControls() {
       const openInNewTabInput = document.getElementById('open-in-new-tab');
       const confirmCloseInput = document.getElementById('confirm-close');
       const debugModeInput = document.getElementById('debug-mode');
+      const showSlopInput = document.getElementById('show-slop');
       const bannerModeInput = document.getElementById('banner-mode');
       const cl0akInput = document.getElementById('cl0ak');
       const cloakWebsiteInput = document.getElementById('cloak-website');
@@ -713,6 +717,10 @@ function setupSettingsFileControls() {
       if (typeof settings.debugMode === 'boolean') {
         debugModeInput.checked = settings.debugMode;
         debugModeInput.dispatchEvent(new Event('change'));
+      }
+      if (typeof settings.showSlop === 'boolean') {
+        showSlopInput.checked = settings.showSlop;
+        showSlopInput.dispatchEvent(new Event('change'));
       }
       if (typeof settings.bannerMode === 'boolean') {
         bannerModeInput.checked = settings.bannerMode;
@@ -812,13 +820,14 @@ function setupPageNavigation() {
   const openInNewTabInput = document.getElementById('open-in-new-tab');
   const confirmCloseInput = document.getElementById('confirm-close');
   const debugModeInput = document.getElementById('debug-mode');
+  const showSlopInput = document.getElementById('show-slop');
   const bannerModeInput = document.getElementById('banner-mode');
   const cl0akInput = document.getElementById('cl0ak');
   const cloakWebsiteInput = document.getElementById('cloak-website');
   const resetCloakWebsiteButton = document.getElementById('reset-cloak-website');
   const gameVersionInput = document.getElementById('game-version');
 
-  if (!gamesButton || !ugsButton || !settingsButton || !creditsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !creditsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
+  if (!gamesButton || !ugsButton || !settingsButton || !creditsButton || !searchControls || !searchInput || !gameControls || !gamesPage || !ugsPage || !appsPage || !settingsPage || !creditsPage || !openInNewTabInput || !confirmCloseInput || !debugModeInput || !showSlopInput || !bannerModeInput || !cl0akInput || !cloakWebsiteInput || !resetCloakWebsiteButton || !gameVersionInput) return;
 
   let savedCloakWebsite = '';
   try {
@@ -826,6 +835,7 @@ function setupPageNavigation() {
     const savedConfirmClose = localStorage.getItem('confirmClose');
     confirmCloseInput.checked = savedConfirmClose === null || savedConfirmClose === 'true';
     debugModeInput.checked = localStorage.getItem('debugMode') === 'true';
+    showSlopInput.checked = localStorage.getItem('showSlop') === 'true';
     bannerModeInput.checked = localStorage.getItem('bannerMode') === 'true';
     cl0akInput.checked = localStorage.getItem('cl0ak') === 'true';
     savedCloakWebsite = localStorage.getItem('cl0akWebsite') || localStorage.getItem('customTabIcon') || '';
@@ -833,6 +843,7 @@ function setupPageNavigation() {
     openInNewTabInput.checked = false;
     confirmCloseInput.checked = true;
     debugModeInput.checked = false;
+    showSlopInput.checked = false;
     bannerModeInput.checked = false;
     cl0akInput.checked = false;
   }
@@ -840,6 +851,9 @@ function setupPageNavigation() {
   state.openInNewTab = openInNewTabInput.checked;
   state.confirmClose = confirmCloseInput.checked;
   state.debugMode = debugModeInput.checked;
+  state.showSlop = showSlopInput.checked;
+  if (state.showSlop) state.hiddenCategories.delete('Slop');
+  else state.hiddenCategories.add('Slop');
   if (state.debugMode) state.hiddenCategories.delete('DEBUG');
   else state.hiddenCategories.add('DEBUG');
   const savedWebsite = parseCloakWebsite(savedCloakWebsite);
@@ -932,6 +946,18 @@ function setupPageNavigation() {
     renderGames();
     try {
       localStorage.setItem('debugMode', String(state.debugMode));
+    } catch (error) {
+      console.warn('Unable to save settings:', error);
+    }
+  });
+  showSlopInput.addEventListener('change', () => {
+    state.showSlop = showSlopInput.checked;
+    if (state.showSlop) state.hiddenCategories.delete('Slop');
+    else state.hiddenCategories.add('Slop');
+    renderCategoryButtons(getCategoryButtons(state.games));
+    renderGames();
+    try {
+      localStorage.setItem('showSlop', String(state.showSlop));
     } catch (error) {
       console.warn('Unable to save settings:', error);
     }
